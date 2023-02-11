@@ -57,8 +57,9 @@ branddb = pymysql.connect(
 with open("user_agents.txt", "r") as ua:
     user_agents_list =  ua.read().split('\n')
 
-headers_rotate = {'User-Agent': random.choice(user_agents_list)}
-print(headers_rotate)
+    headers_rotate = {'User-Agent': random.choice(user_agents_list)}
+    print(headers_rotate)
+    ua.close()
 
 headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'}
 print(headers)
@@ -74,38 +75,19 @@ current_new_ssl = new_ssl.find("textarea", {"class":"form-control"}).get_text()
 modified_file_time = os.path.getmtime("valid_proxies.txt")
 now_time = time.time()
 
-async def fresh_while_on():
-    with open("proxy_list.txt", "w") as pl:
-        fresh_proxies = current_new_proxies[75:]
-        pl.write(fresh_proxies)
+with open("proxy_list.txt", "w") as pl:
+    if now_time - modified_file_time > 540:
+        print(now_time)
+        print(modified_file_time)
+        fresh_proxie = current_new_proxies[75:]
+        fresh_ssl = current_new_ssl[75:]
+        pl.write(fresh_proxie)
+        pl.write(fresh_ssl)
         print("Done adding fresh proxies")
+        check_proxies()
         pl.close()
 
-async def check_while_on():
-    '''make sure the proxies are working'''
-    with open("proxy_list.txt", "r") as f:
-        proxies = f.read().split('\n')
-        for p in proxies:
-            q.put(p)
 
-    valid_proxies = []
-    print("Begin Check")
-    while not q.empty():
-        proxy = q.get()
-        try:
-            res = requests.get("http://ipinfo.io/json",
-                                proxies={"http": proxy, "https:": proxy}, timeout = 1)
-            if res.status_code == 200:
-                print(proxy + " valid and added")
-                valid_proxies.append(proxy)
-        except:
-            continue
-        finally:
-            print("wompwomp")
-    with open("valid_proxies.txt", "w") as v:
-        vps = " \n".join(valid_proxies)
-        v.write(vps)
-        print("done validating proxies")
 
 @bot.event
 async def on_ready():
@@ -125,7 +107,12 @@ async def on_ready():
     channel = discord.utils.get(bot.guilds[0].channels, name="home")
     await channel.send(gif)
     # await channel.send(tgif)
-    await channel.send("Good to go.  Type help for help. Type freshen up beep to refresh proxies.")
+    await channel.send('''
+    Good to go
+    Type help for help
+    Type commands for list of commands
+    Type freshen up beep to refresh proxies.
+    ''')
 
 @bot.event
 async def on_typing(channel, user, when):
@@ -151,62 +138,18 @@ async def on_typing(channel, user, when):
     #     await sent_message.delete()
     # channel = discord.utils.get(bot.guilds[0].channels, name="home")
     if isinstance(channel, discord.TextChannel):
-        message = await channel.send(f'''ಠ_ಠ ''')
+        message = await channel.send('''ಠ___ಠ ''')
+    await asyncio.sleep(2)
+    await message.delete()
+    if isinstance(channel, discord.TextChannel):
+        message = await channel.send('''_ಠ ' hurry''')
     await asyncio.sleep(1)
     await message.delete()
     if isinstance(channel, discord.TextChannel):
-        message = await channel.send(f'''_ಠ ' hurry''')
-    await asyncio.sleep(.5)
+        message = await channel.send('''ಠ  up''')
+    await asyncio.sleep(0.5)
     await message.delete()
-    if isinstance(channel, discord.TextChannel):
-        message = await channel.send(f'''ಠ  up''')
-    await asyncio.sleep(.25)
-    await message.delete()
-    # await asyncio.sleep(1)
-    # if isinstance(channel, discord.TextChannel):
-    #     message = await channel.send(f'''ಠ_ಠ ''')
-    # await asyncio.sleep(4)
-    # await message.delete()
-    # if isinstance(channel, discord.TextChannel):
-    #     message = await channel.send(f'''_ಠ ''')
-    # await asyncio.sleep(1)
-    # await message.delete()
-    # if isinstance(channel, discord.TextChannel):
-    #     message = await channel.send(f'''ಠ ''')
-    # await asyncio.sleep(.5)
-    # await message.delete()
-    # await asyncio.sleep(1)
-    # if isinstance(channel, discord.TextChannel):
-    #     message = await channel.send(f'''ಠ_ಠ ''')
-    # await asyncio.sleep(4)
-    # await message.delete()
-    # if isinstance(channel, discord.TextChannel):
-    #     message = await channel.send(f'''_ಠ ''')
-    # await asyncio.sleep(1)
-    # await message.delete()
-    # if isinstance(channel, discord.TextChannel):
-    #     message = await channel.send(f'''ಠ ''')
-    # await asyncio.sleep(0.5)
-    # await message.delete()
-    # await asyncio.sleep(1)
-    # if isinstance(channel, discord.TextChannel):
-    #     message = await channel.send(f'''(ツ)╭∩╮''')
-    # await asyncio.sleep(4)
-    # await message.delete()
-    # if isinstance(channel, discord.TextChannel):
-    #     message = await channel.send(f''')╭∩╮''')
-    # await asyncio.sleep(2)
-    # await message.delete()
-    # if isinstance(channel, discord.TextChannel):
-    #     message = await channel.send(f'''∩╮''')
-    # await asyncio.sleep(1)
-    # await message.delete()
-    # if isinstance(channel, discord.TextChannel):
-    #     message = await channel.send(f''' ¯\(°_o)/¯  what could you possible be typing for this long? ''')
-    # await asyncio.sleep(5)
-    # await message.delete()
-
-
+    
 @bot.event
 async def on_member_join(member):
     '''when new member joins guild'''
@@ -237,6 +180,39 @@ async def on_message(message):
     br_table = cursor.fetchall()
     br_table_array = [a for b in br_table for a in b]
     br_list = '\n'.join(br_table_array)
+    
+    async def fresh_while_on():
+        with open("proxy_list.txt", "w") as pl:
+            fresh_proxies = current_new_proxies[75:]
+            pl.write(fresh_proxies)
+            print("Done adding fresh proxies")
+            pl.close()
+
+    async def check_while_on():
+        '''make sure the proxies are working'''
+        with open("proxy_list.txt", "r") as f:
+            proxies = f.read().split('\n')
+            for p in proxies:
+                q.put(p)
+
+        valid_proxies = []
+        print("Begin Check")
+        while not q.empty():
+            proxy = q.get()
+            try:
+                res = requests.get("http://ipinfo.io/json",
+                                    proxies={"http": proxy, "https:": proxy}, timeout = 1)
+                if res.status_code == 200:
+                    print(proxy + " valid and added")
+                    valid_proxies.append(proxy)
+            except:
+                continue
+            finally:
+                print("wompwomp")
+        with open("valid_proxies.txt", "w") as v:
+            vps = " \n".join(valid_proxies)
+            v.write(vps)
+            print("done validating proxies")
 
     #refresh proxies
     if "freshen up beep" in message.content.lower():
@@ -287,23 +263,22 @@ async def on_message(message):
     #add site to site list
     async def add_site():
         breakdown = message.content.split()
-        if addstr in breakdown:
-            for site in breakdown:
-                if breakdown[1] in br_table_array:
-                    await channel.send('already there man')
-                    return
-                if breakdown[0].lower() == addstr:
-                    insert_site = (f"INSERT INTO shoe_sites (site_url, site_group) VALUE ('{breakdown[1]}','{breakdown[2].upper()}');")
-                    cursor.execute(insert_site)
-                    branddb.commit()
-                    cursor.close()
-                    await channel.send("added")
-                    await channel.send(f"...\nAdded {breakdown[1].upper()} to group {breakdown[2].upper()} in list:\n{br_list}")
-                    return
+        for site in breakdown:
+            if breakdown[1] in br_table_array:
+                await channel.send('already there man')
+                return
+            else:
+                insert_site = (f"INSERT INTO shoe_sites (site_url, site_group) VALUE ('{breakdown[1]}','{breakdown[2].upper()}');")
+                cursor.execute(insert_site)
+                branddb.commit()
+                cursor.close()
+                await channel.send("added")
+                await channel.send(f"...\nAdded {breakdown[1].upper()} to group {breakdown[2].upper()} in list:\n{br_list}")
+                return
 
     addstr = "add"
     if lowermsg.startswith(addstr):
-        add_site()
+        await add_site()
 
     # get site list
     give_site_list = "site list"
@@ -324,7 +299,7 @@ async def on_message(message):
 
     #input find style (style code)
     async def find_style_code():
-        if message.channel.id == 1069760569181225033:
+        if message.channel.id == 1074057921400414319:
             strip_mess = message.content[10:].strip().split(",")
             style_c = ("SELECT style_code FROM shoes")
             cursor.execute(style_c)
@@ -603,13 +578,13 @@ async def on_message(message):
                             continue
                     await channel.send(sc_url_list_length)
     find_by_style_code = "find style"
-    if message.content.startswith(find_by_style_code):
+    if lowermsg.startswith(find_by_style_code):
         await find_style_code()
 
     #adding shoes to db
     async def add_shoe():
         url = message.content
-        if message.channel.id == 1070166712382656625:
+        if message.channel.id == 1074058028137070602:
             for b in br_table_array:
                 url_input_list = url.split(",")
                 for new_url in url_input_list:
