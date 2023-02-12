@@ -1,0 +1,65 @@
+
+g www.nike.com
+g www.footlocker.com
+g www.dickssportinggoods.com
+cloud www.hibbett.com
+g www.mrporter.com
+g www.finishline.com
+cloud www.goat.com
+coud www.sns.com
+cloud www.flightclub.com
+cloud www.stadiumgoods.com
+www.redfad.com
+cloud www.snipesusa.com
+cloudinary??? www.ssense.com
+g www.nordstrom.com
+g www.footpatrol.com
+g www.thehipstore.co.uk
+g m.thehipstore.co.uk
+g www.size.co.uk
+g m.size.co.uk
+
+https://www.nike.com/t/air-jordan-2-retro-mens-shoes-1dBD2H/DR8884-103,
+https://www.nike.com/t/air-jordan-5-retro-mens-shoes-CcQNw7/DD0587-047,
+https://www.nike.com/t/air-max-97-mens-shoes-LJmK45/DQ3955-001,
+https://www.nike.com/t/air-huarache-premium-mens-shoes-JppwBb/DD1068-007,
+https://www.nike.com/t/air-force-1-07-lv8-mens-shoes-ZvGj5Q/DQ7659-101,
+https://www.nike.com/t/air-force-1-mid-07-lx-mens-shoes-QpdMmT/DV0792-100,
+https://www.footlocker.com/product/adidas-originals-nmd-r1-mens/GZ9256.html,
+https://www.footlocker.com/product/adidas-top-ten-mens/FZ6020.html,
+https://www.footlocker.com/product/Reebok-Answer-IV---Men-s/HR1062.html,
+https://www.dickssportinggoods.com/p/nike-mens-waffle-debut-shoes-22nikmwffldbtxxxxmns/22nikmwffldbtxxxxmns,
+https://www.dickssportinggoods.com/p/nike-mens-air-force-1-07-lv8-shoes-22nikmrfrc107lv8nmnsb/22nikmrfrc107lv8nmnsb,
+https://www.dickssportinggoods.com/p/nike-mens-court-vision-low-next-nature-shoes-22nikmcrtvsnlnnbkmns/22nikmcrtvsnlnnbkmns,
+https://www.dickssportinggoods.com/p/vans-sk8-hi-shoes-22vanask8hblkwhtpmns/22vanask8hblkwhtpmns,
+https://www.mrporter.com/en-us/mens/product/converse/shoes/low-top-sneakers/chuck-70-canvas-sneakers/666467151989203,
+https://www.mrporter.com/en-us/mens/product/adidas-originals/shoes/low-top-sneakers/samba-suede-trimmed-leather-sneakers/9679066508732428,
+https://www.mrporter.com/en-us/mens/product/common-projects/shoes/low-top-sneakers/original-achilles-leather-sneakers/1647597291490209,
+https://www.mrporter.com/en-us/mens/product/nike/shoes/low-top-sneakers/air-max-95-leather-mesh-canvas-and-suede-sneakers/1647597287043273,
+https://www.finishline.com/store/product/air-jordan-retro-1-low-casual-shoes/prod797157?styleId=553558&colorId=063,
+https://www.finishline.com/store/product/air-jordan-retro-7-basketball-shoes/prod788496?styleId=CU9307&colorId=081,
+https://www.finishline.com/store/product/air-jordan-retro-7-basketball-shoes/prod788496?styleId=CU9307&colorId=106,
+https://www.finishline.com/store/product/air-jordan-retro-7-se-basketball-shoes/prod2854204?styleId=DN9782&colorId=001,
+https://www.nordstrom.com/s/comme-des-garons-play-x-converse-chuck-taylor-hidden-heart-high-top-sneaker-unisex/4650483?origin=category-personalizedsort&breadcrumb=Home%2FMen%2FShoes%2FSneakers%20%26%20Athletic&color=001,
+https://www.nordstrom.com/s/adidas-gazelle-sneaker-men/4387102?origin=category-personalizedsort&breadcrumb=Home%2FMen%2FShoes%2FSneakers%20%26%20Athletic&color=210,
+https://www.nordstrom.com/s/new-balance-237-sneaker-unisex/6672900?origin=category-personalizedsort&breadcrumb=Home%2FMen%2FShoes%2FSneakers%20%26%20Athletic&color=306,
+https://www.nordstrom.com/s/converse-chuck-70-high-top-sneaker-men/7263249?origin=category-personalizedsort&breadcrumb=Home%2FMen%2FShoes%2FSneakers%20%26%20Athletic&color=608,
+https://www.footpatrol.com/product/white-new-balance-550-womens/613931_footpatrolcom/,
+https://www.footpatrol.com/product/black-nike-zoom-vomero-5/620281_footpatrolcom/,
+https://www.footpatrol.com/product/orange-nike-air-max-97-og/620321_footpatrolcom/,
+https://www.footpatrol.com/product/black-jordan-air-13/598943_footpatrolcom/,
+https://www.footpatrol.com/product/blue-jordan-air-11-retro-womens/596914_footpatrolcom/,
+https://www.footpatrol.com/product/white-nike-dunk-high-retro/620190_footpatrolcom/,
+https://www.thehipstore.co.uk/product/white-nike-air-force-1-07-fresh/16497733/,
+https://www.thehipstore.co.uk/product/blue-nike-air-max-1/16559422/,
+https://www.thehipstore.co.uk/product/white-nike-terminator-high/18548585/,
+https://www.thehipstore.co.uk/product/blue-adidas-originals-adimatic/18252651/,
+https://www.thehipstore.co.uk/product/brown-new-balance-2002r/16612889/,
+https://www.size.co.uk/product/white-reebok-lt-court-silverwell---exclusive/18895369/,
+https://www.size.co.uk/product/yellow-adidas-originals-bc-trainer-blackpool-seaside-series---exclusive/17205947/,
+https://www.size.co.uk/product/white-adidas-originals-rivalry-low-86/18333295/
+
+
+
+
+
