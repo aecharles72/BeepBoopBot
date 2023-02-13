@@ -52,7 +52,7 @@ bot = discord.Client(intents=intents)
 TOKEN = os.getenv("DISCORD_TOKEN")
 GIPHY_TOKEN = os.getenv("GIPHY_TOKEN")
 TENOR_TOKEN = os.getenv("TENOR_TOKEN")
-OPEN_AI_TOKEN = os.getenv("OPEN_AI_TOKEN")
+openai.api_key = os.getenv("OPEN_AI_TOKEN")
 
 branddb = pymysql.connect(
     host='localhost',
@@ -91,7 +91,7 @@ def startup_proxies():
     with open("proxy_list.txt", "w") as pl:
         print(now_time)
         print(modified_file_time)
-        if now_time - modified_file_time > 540:
+        if now_time - modified_file_time > 60:
             fresh_proxie = current_new_proxies[75:]
             # fresh_ssl = current_new_ssl[75:]
             pl.write(fresh_proxie)
@@ -107,13 +107,18 @@ def startup_proxies():
                 with requests.get("http://ipinfo.io/json") as res:
                     print(res.status)
                     if res.status == 200:
+                        print(proxy)
                         valid_proxies.append(proxy)
                         time.sleep(random.uniform(1, 5))
             except:
                 continue
+            finally:
+                f.close()
 
         with open("valid_proxies.txt", "w") as v:
             v.write("\n".join(valid_proxies))
+            print("done check")
+            v.close()
 
 
 startup_proxies()
@@ -299,7 +304,7 @@ async def on_message(message):
         valid_proxies = []
         print("Begin Check")
         async with aiofiles.open("proxy_list.txt", "r") as f:
-            proxies = await ''.join(f.read()).split()
+            proxies = ''.join(await f.read()).split()
             valid_proxies = []
             async with aiohttp.ClientSession() as session:
                 for proxy in proxies:
@@ -362,9 +367,10 @@ async def on_message(message):
                     sc_url_list_length = len(sc_url_list)
                     # shoe_sc = [a for b in shoe_sc_found for a in b]
                     # shoe_code_list = '\n'.join(shoe_sc.replace("-", " "))
+                    await channel.send(sc_url_list)
                     for s in sc_url_list:
+                        await channel.send(s)
                         try:
-
                             success = False
                             if "www.nike.com" in s.lower():
                                 await channel.send(scode + " it nike")
@@ -375,10 +381,8 @@ async def on_message(message):
                                             print(
                                                 f"using the proxy: {proxy.strip()}")
                                             async with session.get(
-                                                    s, proxies={
-                                                        "http:": proxy.strip(),
-                                                        "https:": proxy.strip()},
-                                                    headers=headers_rotate) as response:
+                                                    s,
+                                                    headers=headers) as response:
                                                 if response.status_code == 200:
                                                     success = True
                                                     soup = BeautifulSoup(
@@ -386,7 +390,7 @@ async def on_message(message):
                                                         "html.parser")
                                                     nike_current_price = soup.find(
                                                         "div", {
-                                                            "data-test": "product-price"
+                                                            "class": "product-price css-11s12ax is--current-price css-tpaepq"
                                                         }).get_text().strip()
                                                     insert_query = f"UPDATE shoes SET price = '{nike_current_price}' WHERE url = '{s}'"
                                                     cursor.execute(
@@ -918,28 +922,35 @@ words''')
 
 ###BEEPAI###
 
-    input_text = message.content
-    discord_user_id = message.author.id
-    username = message.author.name
 
-    async def generate_response(input_text):
-        async with aiohttp.ClientSession() as session:
-            async with session.post("https://api.openai.com/v1/engines/text-davinci/jobs",
-                                    headers={
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer API_KEY"
-                                        },
-                                    json={
-                    "prompt": input_text,
-                    "max_tokens": 100
-                                    }
-                                    ) as response:
-                response_json = await response.json()
-                generated_text = response_json["choices"][0]["text"]
-                response_text = "Here is your response based on the input text: " + generated_text
-                return response_text
+    async def message_to_dict(message):
+        return {
+            'content': message.content,
+            'author': message.author.name,
+            'timestamp': message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        }
+
+    # async def generate_response(message):
+    #     message_dict = await message_to_dict(message)
+    #     params = {'prompt': message_dict['content']}
+    #     response = openai.Completion.create(
+    #         engine="text-davinci-003",
+    #         prompt=message.content,
+    #         max_tokens=10,
+    #         n=1,
+    #         stop=None,
+    #         temperature=0.1,
+    #     )
+    #     generated_text = response["choices"][0]["text"]
+
+    #     # Send generated text back to Discord
+    #     await message.channel.send(generated_text)
+    #     await channel.send("gr^^^")
+    no_no = ["site list", "shoe list", "find style",
+             "add", "gimme", "freshen up beep", "help"]
 
     async def handle_message(discord_user_id, username, message):
+
         async with aiomysql.create_pool(
             host='Localhost',
             port=3306,
@@ -960,16 +971,32 @@ words''')
                         print("added new user")
 
                     user_id = result[0]
-                    response = await generate_response(message)
-                    insert_interaction_query = "INSERT INTO interactions (user_id, context, bot_response) VALUES (%s, %s, %s)"
-                    await cursor.execute(insert_interaction_query, (user_id, message, response))
-                    await conn.commit()
-                    return response
+                    message_dict = await message_to_dict(message)
+                    params = {'prompt': message_dict['content']}
+                    response = openai.Completion.create(
+                        engine="text-davinci-002",
+                        prompt=message.content,
+                        max_tokens=200,
+                        n=1,
+                        stop=None,
+                        temperature=1
+                    )
+                    generated_text = response["choices"][0]["text"]
 
-                loop = asyncio.get_event_loop()
-                result = loop.run_until_complete(
-                    handle_message(discord_user_id, username, input_text))
-                await channel.send(result)
+                    # Send generated text back to Discord
+                    print(generated_text)
+                    await message.channel.send(generated_text)
+                    await channel.send("gr^^^")
+                    insert_interaction_query = "INSERT INTO interactions (user_id, context, bot_response) VALUES (%s, %s, %s)"
+                    await cursor.execute(insert_interaction_query, (user_id, message.content, generated_text))
+                    await conn.commit()
+
+    discord_user_id = message.author.id
+    username = message.author.name
+
+    result = await handle_message(discord_user_id, username, message)
+    await channel.send(result)
+    await channel.send("res^^^")
 
 
 bot.run(TOKEN)
