@@ -53,6 +53,7 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 GIPHY_TOKEN = os.getenv("GIPHY_TOKEN")
 TENOR_TOKEN = os.getenv("TENOR_TOKEN")
 openai.api_key = os.getenv("OPEN_AI_TOKEN")
+ip_token = os.getenv("IP_INFO_TOKEN")
 
 branddb = pymysql.connect(
     host='localhost',
@@ -88,31 +89,33 @@ now_time = time.time()
 
 
 def startup_proxies():
-    with open("proxy_list.txt", "w") as pl:
-        print(now_time)
-        print(modified_file_time)
-        if now_time - modified_file_time > 60:
+    if now_time - modified_file_time > 540:
+        with open("proxy_list.txt", "w") as pl:
+            print(now_time)
+            print(modified_file_time)
             fresh_proxie = current_new_proxies[75:]
             # fresh_ssl = current_new_ssl[75:]
             pl.write(fresh_proxie)
             # await pl.write(fresh_ssl)
             print("Done adding fresh proxies")
             pl.close()
-    with open("proxy_list.txt", "r") as f:
-        proxies = f.read().split("\n")
-        valid_proxies = []
-        for proxy in proxies:
-            print(proxy)
-            try:
-                with requests.get("http://ipinfo.io/json") as res:
-                    print(res.status)
-                    if res.status == 200:
+        with open("proxy_list.txt", "r") as f:
+            proxies = f.read().split("\n")
+            valid_proxies = []
+            for proxy in proxies:
+                check_p = proxy.split(":").pop(0)
+                checker = f"https://ipinfo.io/{check_p}/json?token={ip_token}"
+                print(proxy)
+                with requests.get(checker) as res:
+                    print(checker)
+                    print(res.status_code)
+                    if res.status_code == 200:
                         print(proxy)
                         valid_proxies.append(proxy)
+                    else:
                         time.sleep(random.uniform(1, 5))
-            except:
-                continue
-            finally:
+                    if res.status_code == 429:
+                        break
                 f.close()
 
         with open("valid_proxies.txt", "w") as v:
@@ -189,7 +192,7 @@ async def on_message(message):
     greets = ['hey beep', 'yo beep', 'ay beep',
               'le beep', 'sir beep', 'hey boop',
               'yo boop', 'ay boop', 'le boop', 'sir boop']
-    nanis = ["nani", "nani?", "nani?!", "?"]
+    nanis = ["nani", "nani?", "nani?!"]
     searchs = ['check price', 'current price']
     prefixes = ("http", "Http", "www", "WWW")
 
@@ -219,7 +222,7 @@ async def on_message(message):
             await channel.send(f'Yuh sup @{message.author}')
 
     for nani in nanis:
-        if nani.lower() in lowermsg:
+        if nani.lower() in lowermsg or lowermsg[0] == "?":
             aiohttp_logger = logging.getLogger('aiohttp.client')
             aiohttp_logger.setLevel(logging.WARNING)
             async with aiohttp.ClientSession() as session:
@@ -307,19 +310,23 @@ async def on_message(message):
             proxies = ''.join(await f.read()).split()
             valid_proxies = []
             async with aiohttp.ClientSession() as session:
+
                 for proxy in proxies:
+                    check_p = proxy.split(":").pop(0)
+                    checker = f"https://ipinfo.io/{check_p}/json?token={ip_token}"
                     print(proxy)
-                    try:
-                        async with session.get("http://ipinfo.io/json") as res:
-                            print(res.status)
-                            if await res.status == 200:
-                                valid_proxies.append(proxy)
-                                await asyncio.sleep(random.uniform(1, 5))
-                    except:
-                        continue
-                    finally:
-                        async with aiofiles.open("valid_proxies.txt", "w") as v:
-                            await v.write("\n".join(valid_proxies))
+                    async with session.get(checker) as res:
+                        print(res.status)
+                        if res.status == 200:
+                            valid_proxies.append(proxy)
+                            await asyncio.sleep(random.uniform(1, 5))
+                        else:
+                            await asyncio.sleep(random.uniform(1, 5))
+                        if await res.status == 429:
+                            await channel.send("429 DEAD")
+                            break
+            async with aiofiles.open("valid_proxies.txt", "w") as v:
+                await v.write("\n".join(valid_proxies))
 
     # refresh proxies
     if "freshen up beep" in message.content.lower():
@@ -339,13 +346,6 @@ async def on_message(message):
                     logger.error(f"Received {response.status}")
         await fresh_while_on()
         await check_while_on()
-        sh = ("SELECT name FROM shoes")  # change brand to model
-        cursor.execute(sh)
-        shoe_table = cursor.fetchall()
-        shoe_table_array = [a for b in shoe_table for a in b]
-        shoe_list = '\n'.join(shoe_table_array)
-        await channel.send(shoe_list)
-        return
 
     # input find style (style code)
     async def find_style_code():
@@ -355,15 +355,17 @@ async def on_message(message):
             cursor.execute(style_c)
             style_code_table_array = [a for b in cursor.fetchall() for a in b]
             for scode in strip_mess:
-                #message_length = len(message.content[10:].split(","))
+                # message_length = len(message.content[10:].split(","))
                 if scode in style_code_table_array:
                     # shoe = ("SELECT name FROM shoes WHERE style_code = %s") #change brand to model
-                    #cursor.execute(shoe, (scode))
-                    #shoe_sc_found = cursor.fetchall()
+                    # cursor.execute(shoe, (scode))
+                    # shoe_sc_found = cursor.fetchall()
                     sc_urls = ("SELECT url FROM shoes WHERE style_code = %s")
                     cursor.execute(sc_urls, (scode))
                     # URL = ', '.join(sc_url_list)
-                    sc_url_list = [a for b in cursor.fetchall() for a in b]
+                    sc_url_list = []
+                    sc_url_list.extend(
+                        [a for b in cursor.fetchall() for a in b])
                     sc_url_list_length = len(sc_url_list)
                     # shoe_sc = [a for b in shoe_sc_found for a in b]
                     # shoe_code_list = '\n'.join(shoe_sc.replace("-", " "))
@@ -377,13 +379,14 @@ async def on_message(message):
                                 with open("valid_proxies.txt", "r") as vp:
                                     await channel.send("spinning")
                                     for proxy in vp:
-                                        try:
-                                            print(
-                                                f"using the proxy: {proxy.strip()}")
-                                            async with session.get(
-                                                    s,
-                                                    headers=headers) as response:
-                                                if response.status_code == 200:
+                                        # try:
+                                        print(
+                                            f"using the proxy: {proxy.strip()}")
+                                        async with aiohttp.ClientSession() as session:
+                                            async with session.get(s) as response:
+                                                print(response)
+                                                print(response.status)
+                                                if response.status == 200:
                                                     success = True
                                                     soup = BeautifulSoup(
                                                         await response.text(),
@@ -391,117 +394,139 @@ async def on_message(message):
                                                     nike_current_price = soup.find(
                                                         "div", {
                                                             "class": "product-price css-11s12ax is--current-price css-tpaepq"
-                                                        }).get_text().strip()
+                                                        }).get_text()
                                                     insert_query = f"UPDATE shoes SET price = '{nike_current_price}' WHERE url = '{s}'"
                                                     cursor.execute(
                                                         insert_query)
                                                     branddb.commit()
                                                     await channel.send(nike_current_price)
-                                                await channel.send(s)
-                                                await asyncio.sleep(random.uniform(1, 5))
-                                        except:
-                                            print("damn")
-                                            await asyncio.sleep(random.uniform(1, 5))
-                                            continue
-                                        finally:
-                                            if success:
-                                                break
+                                                    await channel.send(s)
+                                                else:
+                                                    print(response.status)
+                                                    print("damn")
+                                                    await asyncio.sleep(random.uniform(1, 5))
+                                                    continue
+                                    # except:
+                                        # print("damn")
+                                        # await asyncio.sleep(random.uniform(1, 5))
+                                        # continue
+                                    # finally:
+                                                if success == True:
+                                                    break
 
                             elif "www.footlocker.com" in s.lower():
                                 await channel.send(scode + " it footlocker")
                                 with open("valid_proxies.txt", "r") as vp:
                                     await channel.send("spinning")
                                     for proxy in vp:
-                                        try:
-                                            print(
-                                                f"using the proxy: {proxy.strip()}")
-                                            res = requests.get(s, proxies={
-                                                "http:": proxy.strip(),
-                                                "https:": proxy.strip()
-                                            }, headers=headers_rotate, timeout=1)
-                                            print(res.status.code)
-                                            if res.status_code == 200:
-                                                success = True
-                                                soup = BeautifulSoup(
-                                                    res.content, 'html.parser')
-                                                fl_current_price = soup.find(
-                                                    "span", {"class": "ProductPrice"}).get_text()
-                                                insert_query = (
-                                                    f"UPDATE shoes SET price = '{fl_current_price}' WHERE url = '{s}';")
-                                                cursor.execute(insert_query)
-                                                branddb.commit()
-                                                await channel.send(fl_current_price)
-                                            await channel.send(s)
-                                        except:
-                                            print("damn")
-                                            continue
-                                        finally:
-                                            if success:
-                                                break
+                                        # try:
+                                        print(
+                                            f"using the proxy: {proxy.strip()}")
+                                        async with aiohttp.ClientSession() as session:
+                                            async with session.get(s) as response:
+                                                print(response)
+                                                print(response.status)
+                                                if response.status == 200:
+                                                    success = True
+                                                    soup = BeautifulSoup(
+                                                        await response.content, 'html.parser')
+                                                    fl_current_price = soup.find(
+                                                        "span", {"class": "ProductPrice"}).get_text()
+                                                    insert_query = (
+                                                        f"UPDATE shoes SET price = '{fl_current_price}' WHERE url = '{s}';")
+                                                    cursor.execute(
+                                                        insert_query)
+                                                    branddb.commit()
+                                                    await channel.send(fl_current_price)
+                                                    await channel.send(s)
+                                                else:
+                                                    print(response.status)
+                                                    print("damn")
+                                                    await asyncio.sleep(random.uniform(1, 5))
+                                                    continue
+                                        # except:
+                                        #     print("damn")
+                                        #     continue
+                                        # finally:
+                                                if success:
+                                                    break
 
                             elif "www.dickssportinggoods.com" in s.lower():
                                 await channel.send(scode + " it dicks")
                                 with open("valid_proxies.txt", "r") as vp:
                                     await channel.send("spinning")
                                     for proxy in vp:
-                                        try:
-                                            print(
-                                                f"using the proxy: {proxy.strip()}")
-                                            res = requests.get(s, proxies={
-                                                "http:": proxy.strip(),
-                                                "https:": proxy.strip()
-                                            }, headers=headers_rotate, timeout=5)
-                                            print(res.status.code)
-                                            if res.status_code == 200:
-                                                success = True
-                                                soup = BeautifulSoup(
-                                                    res.content, 'html.parser')
-                                                dicks_current_price = soup(
-                                                    "span", {"class": "product-price ng-star-inserted"}).get_text()
-                                                insert_query = (
-                                                    f"UPDATE shoes SET price = '{dicks_current_price}' WHERE url = '{s}';")
-                                                cursor.execute(insert_query)
-                                                branddb.commit()
-                                                await channel.send(dicks_current_price)
-                                            await channel.send(s)
-                                        except:
-                                            print("damn")
-                                            continue
-                                        finally:
-                                            if success:
-                                                break
+                                        # try:
+                                        print(
+                                            f"using the proxy: {proxy.strip()}")
+                                        async with aiohttp.ClientSession() as session:
+                                            async with session.get(s) as response:
+                                                print(response)
+                                                print(response.status)
+                                                if response.status == 200:
+                                                    success = True
+                                                    soup = BeautifulSoup(
+                                                        await response.content, 'html.parser')
+                                                    dicks_current_price = soup(
+                                                        "span", {"class": "product-price ng-star-inserted"}).get_text()
+                                                    insert_query = (
+                                                        f"UPDATE shoes SET price = '{dicks_current_price}' WHERE url = '{s}';")
+                                                    cursor.execute(
+                                                        insert_query)
+                                                    branddb.commit()
+                                                    await channel.send(dicks_current_price)
+                                                    await channel.send(s)
+                                                else:
+                                                    print(response.status)
+                                                    print("damn")
+                                                    await asyncio.sleep(random.uniform(1, 5))
+                                                    continue
+                                                await channel.send(s)
+                                        # except:
+                                        #     print("damn")
+                                        #     continue
+                                        # finally:
+                                if success:
+                                    break
 
                             elif "www.nordstrom.com" in s.lower():
                                 await channel.send(scode + " it nordstrom")
                                 with open("valid_proxies.txt", "r") as vp:
                                     await channel.send("spinning")
                                     for proxy in vp:
-                                        try:
-                                            print(
-                                                f"using the proxy: {proxy.strip()}")
-                                            res = requests.get(s, proxies={
-                                                "http:": proxy.strip(),
-                                                "https:": proxy.strip()
-                                            }, headers=headers_rotate, timeout=5)
-                                            print(res.status.code)
-                                            if res.status_code == 200:
-                                                success = True
-                                                soup = BeautifulSoup(
-                                                    res.content, 'html.parser')
-                                                nord_current_price = soup.find(
-                                                    "span", {"class": " qHz0a THmDu t1yis sxEtG jRV6p"}).get_text()
-                                                insert_query = (
-                                                    f"UPDATE shoes SET price = '{nord_current_price}' WHERE url = '{s}';")
-                                                cursor.execute(insert_query)
-                                                branddb.commit()
-                                                await channel.send(nord_current_price)
-                                            await channel.send(s)
-                                        except:
-                                            print("damn")
-                                            continue
-                                        finally:
-                                            if success:
-                                                break
+                                        # try:
+                                        print(
+                                            f"using the proxy: {proxy.strip()}")
+                                        async with aiohttp.ClientSession() as session:
+                                            async with session.get(s) as response:
+                                                print(response)
+                                                print(response.status)
+                                                if response.status == 200:
+                                                    success = True
+                                                    soup = BeautifulSoup(
+                                                        await response.content, 'html.parser')
+                                                    nord_current_price = soup.select_tone(
+                                                        'div.ggbBg y3xFi span[aria-hidden="true"]')
+                                                    if nord_current_price is not None:
+                                                        nord_current_price = nord_current_price.get_text()
+                                                    insert_query = (
+                                                        f"UPDATE shoes SET price = '{nord_current_price}' WHERE url = '{s}';")
+                                                    cursor.execute(
+                                                        insert_query)
+                                                    branddb.commit()
+                                                    await channel.send(nord_current_price)
+                                                    await channel.send(s)
+                                                else:
+                                                    print("damn")
+                                                    continue
+                                if success == True:
+                                    break
+
+                                    #     print("damn")
+                                    #     continue
+                                    # finally:
+                                    #     if success:
+                                    #         break
 
                             elif "www.mrporter.com" in s.lower():
                                 await channel.send(scode + " it mrporter")
@@ -678,7 +703,7 @@ async def on_message(message):
         url = message.content
         if message.channel.id == 1074058028137070602:
             for b in br_table_array:
-                url_input_list = url.split(",")
+                url_input_list = url.split(", ")
                 for new_url in url_input_list:
                     print(url_input_list)
                     if b.lower() in new_url.lower():
@@ -948,8 +973,14 @@ words''')
     #     await channel.send("gr^^^")
     no_no = ["site list", "shoe list", "find style",
              "add", "gimme", "freshen up beep", "help"]
+    punct = [".", "?", "!"
+             ]
+    punct_message = message.content.endswith(('.', '?', '!'))
+    discord_user_id = message.author.id
+    username = message.author.name
+    print(punct_message)
 
-    async def handle_message(discord_user_id, username, message):
+    async def handle_message():
 
         async with aiomysql.create_pool(
             host='Localhost',
@@ -967,36 +998,46 @@ words''')
                     if result is None:
                         insert_user_query = "INSERT INTO users (discord_user_id, username) VALUES (%s, %s)"
                         await cursor.execute(insert_user_query, (discord_user_id, username))
-                        await conn.commit()
+                        await conn.cssswommit()
                         print("added new user")
+                    else:
+                        print("known user")
 
                     user_id = result[0]
-                    message_dict = await message_to_dict(message)
-                    params = {'prompt': message_dict['content']}
-                    response = openai.Completion.create(
-                        engine="text-davinci-002",
-                        prompt=message.content,
-                        max_tokens=200,
-                        n=1,
-                        stop=None,
-                        temperature=1
-                    )
-                    generated_text = response["choices"][0]["text"]
+                    # message_dict = await message_to_dict(message)
+                    # params = {'prompt': message_dict['content']}
+                    # message_content = message.content + "."
+                    # select_query = "SELECT bot_response FROM interactions WHERE user_id=%s ORDER BY interaction_timestamp DESC LIMIT 10"
+                    # await cursor.execute(select_query, (user_id))
+                    # previous_resp = await cursor.fetchall()
+                    # prev_resp_list = [resp[0] for resp in previous_resp]
+                    # prev_resp_str = " ".join(prev_resp_list)
+                    # prompt = prev_resp_str + " " + message.content
+                    if punct_message == True:
+                        response = openai.Completion.create(
+                            engine="text-davinci-003",
+                            prompt=message.content,
+                            max_tokens=100,
+                            n=1,
+                            top_p=1,
+                            stop=None,
+                            frequency_penalty=0,
+                            presence_penalty=0,
+                            temperature=0
+                        )
+                        generated_text = response["choices"][0]["text"]
 
-                    # Send generated text back to Discord
-                    print(generated_text)
-                    await message.channel.send(generated_text)
-                    await channel.send("gr^^^")
-                    insert_interaction_query = "INSERT INTO interactions (user_id, context, bot_response) VALUES (%s, %s, %s)"
-                    await cursor.execute(insert_interaction_query, (user_id, message.content, generated_text))
-                    await conn.commit()
+                        # Send generated text back to Discord
+                        print(generated_text)
+                        await message.channel.send(generated_text)
+                        await channel.send("gr^^^")
+                        insert_interaction_query = "INSERT INTO interactions (user_id, context, bot_response) VALUES (%s, %s, %s)"
+                        await cursor.execute(insert_interaction_query, (user_id, message.content, generated_text))
+                        await conn.commit()
 
-    discord_user_id = message.author.id
-    username = message.author.name
-
-    result = await handle_message(discord_user_id, username, message)
-    await channel.send(result)
-    await channel.send("res^^^")
-
+        # result = await handle_message(discord_user_id, username, message)
+        # await channel.send(result)
+        # await channel.send("res^^^")
+    await handle_message()
 
 bot.run(TOKEN)
