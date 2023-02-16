@@ -46,9 +46,8 @@ async def add_site(br_table_array, message, channel, cursor, branddb, br_list):
         else:
             insert_site = (
                 f"INSERT INTO shoe_sites (site_url, site_group) VALUE ('{breakdown[1]}','{breakdown[2].upper()}');")
-            cursor.execute(insert_site)
-            branddb.commit()
-            cursor.close()
+            await cursor.execute(insert_site)
+            await branddb.commit()
             await channel.send("added")
             await channel.send(f"...\nAdded {breakdown[1].upper()} to group {breakdown[2].upper()} in list:\n{br_list}")
             return
@@ -131,9 +130,9 @@ async def add_group_a(a, new_url, cursor, branddb, channel):
     insert_query = (
         "INSERT INTO shoes (name, style_code, url) VALUES (%s,%s,%s);"
     )  # change brand to model
-    cursor.execute(
+    await cursor.execute(
         insert_query, (newname, style_code, new_url))
-    branddb.commit()
+    await branddb.commit()
     await channel.send(f'Got it {newname} {style_code}')
 
 
@@ -155,9 +154,9 @@ async def add_group_b(sb, new_url, cursor, branddb, channel):
     insert_query = (
         "INSERT INTO shoes (name, style_code, url) VALUES (%s,%s,%s);"
     )  # change brand to model
-    cursor.execute(
+    await cursor.execute(
         insert_query, (newname, style_code, name_sty))
-    branddb.commit()
+    await branddb.commit()
     await channel.send(f'Got it {newname} {style_code}')
     # await channel.send(name_sty)
     # await channel.send(name_style)
@@ -185,9 +184,9 @@ async def add_group_d(new_url, cursor, branddb, channel):
     insert_query = (
         "INSERT INTO shoes (name, style_code, url) VALUES (%s,%s,%s);"
     )  # change brand to model
-    cursor.execute(
+    await cursor.execute(
         insert_query, (newname, style_code, name_sty))
-    branddb.commit()
+    await branddb.commit()
     await channel.send(f'Got it {newname} {style_code}')
     # await channel.send(name_sty)
     # await channel.send(name_sty_trim)
@@ -199,16 +198,15 @@ async def add_group_d(new_url, cursor, branddb, channel):
 # adding shoes to db
 
 
-async def add_shoe(message, channel, cursor, branddb, br_table_array):
+async def add_shoe(message, add_shoe_channel, channel, cursor, branddb, br_table_array):
     url = message.content
-    if message.channel.id == 1074058028137070602:
+    if message.channel.id == add_shoe_channel:
         for b in br_table_array:
             url_input_list = url.split(", ")
             for new_url in url_input_list:
-                print(url_input_list)
                 if b.lower() in new_url.lower():
                     is_it = ("SELECT url FROM shoes")
-                    cursor.execute(is_it)
+                    await cursor.execute(is_it)
                     is_it_table = cursor.fetchall()
                     is_it_table_array = [a for b in is_it_table for a in b]
                     if new_url in is_it_table_array:
@@ -220,8 +218,8 @@ async def add_shoe(message, channel, cursor, branddb, br_table_array):
 
                     group_a = (
                         "SELECT site_url FROM shoe_sites WHERE site_group = 'A'")
-                    cursor.execute(group_a)
-                    group_a_list = [a for b in cursor.fetchall()
+                    await cursor.execute(group_a)
+                    group_a_list = [a for b in await cursor.fetchall()
                                     for a in b]
                     for a in group_a_list:
                         if a in new_url:
@@ -230,8 +228,8 @@ async def add_shoe(message, channel, cursor, branddb, br_table_array):
 
                     group_b = (
                         "SELECT site_url FROM shoe_sites WHERE site_group = 'B'")
-                    cursor.execute(group_b)
-                    group_b_list = [a for b in cursor.fetchall()
+                    await cursor.execute(group_b)
+                    group_b_list = [a for b in await cursor.fetchall()
                                     for a in b]
                     for sb in group_b_list:
                         if sb in new_url:
@@ -240,8 +238,8 @@ async def add_shoe(message, channel, cursor, branddb, br_table_array):
 
                     group_c = (
                         "SELECT site_url FROM shoe_sites WHERE site_group = 'C'")
-                    cursor.execute(group_c)
-                    group_c_list = [a for b in cursor.fetchall()
+                    await cursor.execute(group_c)
+                    group_c_list = [a for b in await cursor.fetchall()
                                     for a in b]
                     for c in group_c_list:
                         if c in new_url:
@@ -250,14 +248,13 @@ async def add_shoe(message, channel, cursor, branddb, br_table_array):
 
                     group_d = (
                         "SELECT site_url FROM shoe_sites WHERE site_group = 'D'")
-                    cursor.execute(group_d)
-                    group_d_list = [a for b in cursor.fetchall()
+                    await cursor.execute(group_d)
+                    group_d_list = [a for b in await cursor.fetchall()
                                     for a in b]
                     for d in group_d_list:
                         if d in new_url:
                             await add_group_d(new_url, cursor, branddb, channel)
                             break
-    cursor.close()
 
 # search for shoe
 
@@ -275,9 +272,50 @@ async def search_shoes(aiohttp, random, GIPHY_TOKEN, lowermsg, cursor, branddb, 
         to_find = lowermsg[6:]
         found_shoes = (
             f"SELECT * FROM shoes WHERE name LIKE '%{to_find}%' OR url LIKE '%{to_find}%'")
-        cursor.execute(found_shoes)
-        all_found = cursor.fetchall()
+        await cursor.execute(found_shoes)
+        all_found = await cursor.fetchall()
         all_found_list = [a for b in all_found for a in b]
         clean = '\n'.join(map(str, all_found_list))
         # clean_list = [a for b in clean for a in b]
         await channel.send(clean)
+
+
+def check(message, author, channel):
+    return author == message.author and channel == message.channel
+
+
+async def new_thread(discord, bot, message, channel, thread_name, thread_reason):
+    text_channel = discord.utils.get(message.guild.channels, name='threads')
+    if not text_channel:
+        text_channel = await channel.category.create_text_channel('threads')
+    thread = await text_channel.create_thread(
+        name=thread_name,
+        auto_archive_duration=0,
+        reason=thread_reason)
+    fresh_thread = discord.utils.get(
+        message.guild.threads, name=thread_name)
+    await text_channel.send(
+        f'"{message.author}" created in {text_channel.mention}!\n{thread.mention}', mention_author=True)
+    await fresh_thread.send(f'{message.author.mention} your private thread')
+
+
+async def make_new_thread(discord, bot, asyncio, message, check, channel, author):
+    await channel.send("Gimme name 30 SECONDS!")
+    next_resp = False
+    def check_(m): return check(m, author, channel)
+    try:
+        # Wait for the user's response
+        response = await bot.wait_for('message', check=check_, timeout=30)
+        thread_name = response.content
+        next_resp = True
+    except asyncio.TimeoutError:
+        await channel.send("Too slow, try again!")
+    if next_resp == True:
+        await channel.send("Ok but why? 30 SECONDS!")
+        try:
+            response = await bot.wait_for('message', check=check_, timeout=30)
+            thread_reason = response.content
+        except asyncio.TimeoutError:
+            await channel.send("Too slow, try again!")
+        finally:
+            await new_thread(discord, bot, message, channel, thread_name, thread_reason)

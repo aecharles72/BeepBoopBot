@@ -19,50 +19,68 @@
     |=====;__/___./
     '-'-'-"""""""`
 
-
-Send link to add shoe! As long as
- the site is in site list you str8!
-Check the site list by sending
- "site list". No site in list?
-Send "add" then the site followed
- by the appropriate format letter.
-a, b, c, or d. "www.store.com a"
-
-**Don't worry about
-the rest(?=>) part of the url**
-
-Format A
-.com/blah/n-a-m-e/scORsku
-
-Format B
-.com/blah/n-a-m-e-sc-sc
-
-Format C
-dont work
-
-Format D
-.com/blah/n-a-m-e-sc
-
-Multi-link input only registers the
-sites coming from the first in the
-list. Seperate them with a , .
-
-https://www.n.com/no/win,
-www.f.com/af/shoe-09, www.g.com/e,
-http://www.flb.com/clo
-
-Check all shoes list in the db by
- sending "shoe list"
-
-Check for current prices in db by
- sending "find style" followed by
- the style code.One code at a time
-
-find style CHJKS-9878
-
-Refresh the proxies by sending
-"freshen up beep"
-
-Search for shoes in database by
-sending "gimme" followed by search
-words'''
+***ADD SHOE TO DB
+    Send link to add shoe! As long as
+    the site is in site list you str8!
+    
+    
+***CHECK SITE LIST
+    Check the site list by sending
+    "site list". No site in list?
+    
+     
+***AD SITE TO DB
+    Send "add" then the site followed
+    by the appropriate format letter.
+     
+    a, b, c, or d. "www.store.com a"
+    
+	*Don't worry about the
+	rest(?=>) part of the url*
+    
+    
+    Format A
+    .com/blah/n-a-m-e/scORsku
+    
+    Format B
+    .com/blah/n-a-m-e-sc-sc
+    
+    Format C
+    dont work
+    
+    Format D
+    .com/blah/n-a-m-e-sc
+    
+    
+***ADDING MULTIPLE ITEMS
+    Multi-link input only registers the
+    sites coming from the first in the
+    list. Seperate them with a , .
+    
+    https://www.n.com/no/win,
+    www.f.com/af/shoe-09, www.g.com/e,
+    http://www.flb.com/clo
+    
+    
+***CHECK SHOE LIST
+    Check all shoes list in the db by
+     sending "shoe list"
+    
+    
+***CHECK CURRENT PRICE
+    Check for current prices in db by
+     sending "find style" followed by
+     the style code.One code at a time
+    
+    find style CHJKS-9878
+    
+    
+***REFRESH PROXIES
+    Refresh the proxies by sending
+    "freshen up beep"
+    
+    
+***SEARCH DB
+    Search for shoes in database by
+    sending "gimme" followed by search
+    words'''

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # chatgpt integration and database
+
 async def message_to_dict(message):
     return {
         'content': message.content,
@@ -13,7 +14,7 @@ punct = [".", "?", "!"
          ]
 
 
-async def handle_message(aiomysql, openai, message, cursor):
+async def handle_message(aiomysql, openai, message):
 
     punct_message = message.content.endswith(('.', '?', '!'))
     discord_user_id = message.author.id
@@ -36,7 +37,7 @@ async def handle_message(aiomysql, openai, message, cursor):
                 if result is None:
                     insert_user_query = "INSERT INTO users (discord_user_id, username) VALUES (%s, %s)"
                     await cursor.execute(insert_user_query, (discord_user_id, username))
-                    await conn.cssswommit()
+                    await conn.commit()
                     print("added new user")
                 else:
                     print("known user")

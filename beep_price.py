@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 # price checking
-async def find_style_code(aiohttp, BeautifulSoup, asyncio, random, message, channel, cursor, branddb):
-    if message.channel.id == 1074057921400414319:
+async def find_style_code(aiohttp, aiomysql, BeautifulSoup, asyncio, random, message, home_channel, channel, cursor, branddb):
+    if message.channel.id == home_channel:
         strip_mess = message.content[10:].strip().split(",")
         style_c = ("SELECT style_code FROM shoes")
-        cursor.execute(style_c)
-        style_code_table_array = [a for b in cursor.fetchall() for a in b]
+        await cursor.execute(style_c)
+        style_code_table_array = [a for b in await cursor.fetchall() for a in b]
         for scode in strip_mess:
             # message_length = len(message.content[10:].split(","))
             if scode in style_code_table_array:
@@ -13,11 +13,11 @@ async def find_style_code(aiohttp, BeautifulSoup, asyncio, random, message, chan
                 # cursor.execute(shoe, (scode))
                 # shoe_sc_found = cursor.fetchall()
                 sc_urls = ("SELECT url FROM shoes WHERE style_code = %s")
-                cursor.execute(sc_urls, (scode))
+                await cursor.execute(sc_urls, (scode))
                 # URL = ', '.join(sc_url_list)
                 sc_url_list = []
                 sc_url_list.extend(
-                    [a for b in cursor.fetchall() for a in b])
+                    [a for b in await cursor.fetchall() for a in b])
                 # shoe_sc = [a for b in shoe_sc_found for a in b]
                 # shoe_code_list = '\n'.join(shoe_sc.replace("-", " "))
                 await channel.send(sc_url_list)
@@ -37,7 +37,7 @@ async def find_style_code(aiohttp, BeautifulSoup, asyncio, random, message, chan
                                         async with session.get(s) as response:
                                             print(response)
                                             print(response.status)
-                                            if response.status == 200:
+                                            if await response.status == 200:
                                                 success = True
                                                 soup = BeautifulSoup(
                                                     await response.text(),
@@ -46,10 +46,18 @@ async def find_style_code(aiohttp, BeautifulSoup, asyncio, random, message, chan
                                                     "div", {
                                                         "class": "product-price css-11s12ax is--current-price css-tpaepq"
                                                     }).get_text()
-                                                insert_query = f"UPDATE shoes SET price = '{nike_current_price}' WHERE url = '{s}'"
-                                                cursor.execute(
-                                                    insert_query)
-                                                branddb.commit()
+                                                await channel.send(nike_current_price)
+                                                price_query = f"SELECT price WHERE url = '{s}'"
+                                                await cursor.execute(price_query)
+                                                price_q = await cursor.fetchone()
+                                                await channel.send(price_q)
+                                                if price_q == None:
+                                                    insert_query = f"UPDATE shoes SET price = '{nike_current_price}' WHERE url = '{s}'"
+                                                else:
+                                                    await channel.send(price_q)
+                                                    insert_query = f"UPDATE shoes SET current_price = '{nike_current_price}' WHERE url = '{s}'"
+                                                await cursor.execute(insert_query)
+                                                await branddb.commit()
                                                 await channel.send(nike_current_price)
                                                 await channel.send(s)
                                             else:
@@ -187,7 +195,7 @@ async def find_style_code(aiohttp, BeautifulSoup, asyncio, random, message, chan
                                                     f"UPDATE shoes SET price = '{mrp_current_price}' WHERE url = '{s}';")
                                                 cursor.execute(
                                                     insert_query)
-                                                branddb.commit()
+                                                await branddb.commit()
                                                 await channel.send(mrp_current_price)
                                                 await channel.send(s)
                                             else:
