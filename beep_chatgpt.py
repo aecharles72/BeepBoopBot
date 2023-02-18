@@ -19,7 +19,7 @@ async def handle_message(aiomysql, openai, message):
     punct_message = message.content.endswith(('.', '?', '!'))
     discord_user_id = message.author.id
     username = message.author.name
-    print(punct_message)
+    print(f"User Input: {punct_message}")
 
     async with aiomysql.create_pool(
         host='Localhost',
@@ -53,6 +53,7 @@ async def handle_message(aiomysql, openai, message):
                 # prev_resp_str = " ".join(prev_resp_list)
                 # prompt = prev_resp_str + " " + message.content
                 if punct_message == True:
+                    print(f"User:{message.content}")
                     response = openai.Completion.create(
                         engine="text-davinci-003",
                         prompt=message.content,
@@ -67,7 +68,7 @@ async def handle_message(aiomysql, openai, message):
                     generated_text = response["choices"][0]["text"]
 
                     # Send generated text back to Discord
-                    print(generated_text)
+                    print(f"Beep:{generated_text}")
                     await message.channel.send(generated_text)
                     # await channel.send("gr^^^")
                     insert_interaction_query = "INSERT INTO interactions (user_id, context, bot_response) VALUES (%s, %s, %s)"

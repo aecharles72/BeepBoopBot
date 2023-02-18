@@ -37,6 +37,7 @@ from dotenv import load_dotenv
 from bbbfunc import (
     startup_proxies,
     add_site,
+    del_site,
     fresh_while_on,
     check_while_on,
     add_shoe,
@@ -70,7 +71,6 @@ with open("user_agents.txt", "r") as ua:
     user_agents_list = ua.read().split('\n')
     headers_rotate = {'User-Agent': random.choice(user_agents_list)}
     print(headers_rotate)
-    ua.close()
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'}
@@ -90,7 +90,6 @@ current_new_ssl = new_ssl.find(
 
 modified_file_time = os.path.getmtime("valid_proxies.txt")
 now_time = time.time()
-
 
 startup_proxies(requests, time, random, now_time,
                 modified_file_time, current_new_proxies, ip_token)
@@ -117,9 +116,8 @@ async def on_ready():
             else:
                 logger.error(f"Received {response.status}")
     await channel.send('''...
-Type help for help
 Type commands for list of commands
-Type freshen up beep to refresh proxies.
+
 You can ask me questions about stuff and things
     but you must have punctuation! ( . ? !)
     ''')
@@ -174,7 +172,58 @@ async def on_message(message):
                 lowermsg = message.content.lower()
                 where_msg = message.channel.id
 
-                if where_msg == home_channel or isinstance(channel, discord.Thread):
+                if where_msg == home_channel:
+                    home_good = ("site list", "shoe list",
+                                 "find style", "gimme", "help")
+                    if where_msg == add_shoe_channel:
+                        if any(message.content.startswith(good) for good in home_good):
+                            await message.delete()
+                            await channel.send("Dirty work in your thread please")
+                        else:
+                            addstr = "add"
+                            if lowermsg.startswith(addstr):
+                                await add_site(br_table_array,
+                                               message,
+                                               channel,
+                                               cursor,
+                                               branddb,
+                                               br_list)
+
+                            delete = "delete"
+                            if lowermsg.startswith(delete):
+                                await del_site(br_table_array,
+                                               message,
+                                               channel,
+                                               cursor,
+                                               branddb)
+                            # refresh proxies
+                            if "freshen up beep" in message.content.lower():
+                                aiohttp_logger = logging.getLogger(
+                                    'aiohttp.client')
+                                aiohttp_logger.setLevel(logging.WARNING)
+                                async with aiohttp.ClientSession() as session:
+                                    async with session.get(f'https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=ill+be+back&limit=10') as response:
+                                        if response.status == 200:
+                                            gifs_list = await response.json()
+                                            gifs = gifs_list["data"]
+                                            if gifs:
+                                                gif = random.choice(gifs)[
+                                                    "url"]
+                                                await channel.send(gif)
+                                            else:
+                                                logger.warning("No gifs")
+                                        else:
+                                            logger.error(
+                                                f"Received {response.status}")
+                                await fresh_while_on(aiofiles, current_new_proxies)
+                                await check_while_on(aiofiles,
+                                                     aiohttp,
+                                                     asyncio,
+                                                     random,
+                                                     ip_token,
+                                                     channel)
+
+                if isinstance(channel, discord.Thread):
                     greets = ['hey beep', 'yo beep', 'ay beep',
                               'le beep', 'sir beep', 'hey boop',
                               'yo boop', 'ay boop', 'le boop', 'sir boop']
@@ -225,15 +274,6 @@ async def on_message(message):
                                             f"Received {response.status}")
                             await channel.send("Nani?!")
 
-                    addstr = "add"
-                    if lowermsg.startswith(addstr):
-                        await add_site(br_table_array,
-                                       message,
-                                       channel,
-                                       cursor,
-                                       branddb,
-                                       br_list)
-
                     # get site list
                     give_site_list = "site list"
                     if give_site_list in lowermsg:
@@ -252,30 +292,6 @@ async def on_message(message):
                         await channel.send(shoe_list)
                         return
 
-                    # refresh proxies
-                    if "freshen up beep" in message.content.lower():
-                        aiohttp_logger = logging.getLogger('aiohttp.client')
-                        aiohttp_logger.setLevel(logging.WARNING)
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(f'https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=ill+be+back&limit=10') as response:
-                                if response.status == 200:
-                                    gifs_list = await response.json()
-                                    gifs = gifs_list["data"]
-                                    if gifs:
-                                        gif = random.choice(gifs)["url"]
-                                        await channel.send(gif)
-                                    else:
-                                        logger.warning("No gifs")
-                                else:
-                                    logger.error(f"Received {response.status}")
-                        await fresh_while_on(aiofiles, current_new_proxies)
-                        await check_while_on(aiofiles,
-                                             aiohttp,
-                                             asyncio,
-                                             random,
-                                             ip_token,
-                                             channel)
-
                     # input find style (style code)
                     find_by_style_code = "find style"
                     if lowermsg.startswith(find_by_style_code):
@@ -284,6 +300,7 @@ async def on_message(message):
                                               BeautifulSoup,
                                               asyncio,
                                               random,
+                                              headers_rotate,
                                               message,
                                               home_channel,
                                               channel,
@@ -309,6 +326,7 @@ async def on_message(message):
             ****shoe list.........>
             ****find style........>
             ****add...............>
+            ****delete............>
             ****gimme.............>
             ****freshen up beep>..>
             ****help..............>
@@ -386,18 +404,19 @@ async def on_message(message):
                 ###BEEPAI###
                     await handle_message(aiomysql, openai, message)
 
-                a_s_good = ("http", "www", "https", "got")
-                if where_msg == add_shoe_channel:
-                    if not any(message.content.startswith(good) for good in a_s_good):
-                        await message.delete()
-                    else:
-                        # adding shoes to db
-                        await add_shoe(message,
-                                       add_shoe_channel,
-                                       channel,
-                                       cursor,
-                                       branddb,
-                                       br_table_array)
+                # add shoe to db
+                if message.channel.id == add_shoe_channel:
+                    a_s_good = ("http", "www", "https", "got")
+                    if where_msg == add_shoe_channel:
+                        if not any(message.content.startswith(good) for good in a_s_good):
+                            await message.delete()
+                        else:
+                            # adding shoes to db
+                            await add_shoe(message,
+                                           channel,
+                                           cursor,
+                                           branddb,
+                                           br_table_array)
 
 
 bot.run(TOKEN)

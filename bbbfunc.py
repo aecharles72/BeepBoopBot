@@ -2,7 +2,7 @@
 
 
 def startup_proxies(requests, time, random, now_time, modified_file_time, current_new_proxies, ip_token):
-    if now_time - modified_file_time > 540:
+    if now_time - modified_file_time > 1800:
         with open("proxy_list.txt", "w") as pl:
             print(now_time)
             print(modified_file_time)
@@ -18,10 +18,8 @@ def startup_proxies(requests, time, random, now_time, modified_file_time, curren
                 checker = f"https://ipinfo.io/{check_p}/json?token={ip_token}"
                 print(proxy)
                 with requests.get(checker) as res:
-                    print(checker)
                     print(res.status_code)
                     if res.status_code == 200:
-                        print(proxy)
                         valid_proxies.append(proxy)
                     else:
                         time.sleep(random.uniform(1, 5))
@@ -51,6 +49,23 @@ async def add_site(br_table_array, message, channel, cursor, branddb, br_list):
             await channel.send("added")
             await channel.send(f"...\nAdded {breakdown[1].upper()} to group {breakdown[2].upper()} in list:\n{br_list}")
             return
+
+
+async def del_site(br_table_array, message, channel, cursor, branddb):
+    site_to_del = message.content[7:].lower()
+    print(site_to_del)
+    find_site = f"SELECT id FROM shoe_sites WHERE site_url = '{site_to_del}'"
+    print(find_site)
+    await cursor.execute(find_site)
+    found = await cursor.fetchone()
+    print(found)
+    found_id = found[0]
+    print(found_id)
+    delete_site = f"DELETE FROM shoe_sites WHERE id = '{found_id}'"
+    print(delete_site)
+    await cursor.execute(delete_site)
+    await branddb.commit()
+    await channel.send(f"{found} gone")
 
 
 async def fresh_while_on(aiofiles, current_new_proxies):
@@ -198,63 +213,64 @@ async def add_group_d(new_url, cursor, branddb, channel):
 # adding shoes to db
 
 
-async def add_shoe(message, add_shoe_channel, channel, cursor, branddb, br_table_array):
+async def add_shoe(message, channel, cursor, branddb, br_table_array):
     url = message.content
-    if message.channel.id == add_shoe_channel:
-        for b in br_table_array:
-            url_input_list = url.split(", ")
-            for new_url in url_input_list:
-                if b.lower() in new_url.lower():
-                    is_it = ("SELECT url FROM shoes")
-                    await cursor.execute(is_it)
-                    is_it_table = cursor.fetchall()
-                    is_it_table_array = [a for b in is_it_table for a in b]
-                    if new_url in is_it_table_array:
-                        await channel.send(new_url)
-                        await channel.send("^^^dupe^^^")
-                        if len(new_url.strip().split(",")) <= 1:
-                            continue
-                        return
+    url_input_list = [u.strip() for u in url.split(",")]
+    # print(url_input_list)
+    # print(br_table_array)
+    match_list = [
+        match for match in url_input_list for b in br_table_array if b.lower() in match.lower()]
+    # print(match_list)
+    for new_url in match_list:
+        is_it = ("SELECT url FROM shoes")
+        await cursor.execute(is_it)
+        is_it_table = await cursor.fetchall()
+        is_it_table_array = [a for b in is_it_table for a in b]
+        if new_url in is_it_table_array:
+            await channel.send("^^^dupe^^^")
+            if len(new_url.strip().split(",")) >= 1:
+                continue
+            return
 
-                    group_a = (
-                        "SELECT site_url FROM shoe_sites WHERE site_group = 'A'")
-                    await cursor.execute(group_a)
-                    group_a_list = [a for b in await cursor.fetchall()
-                                    for a in b]
-                    for a in group_a_list:
-                        if a in new_url:
-                            await add_group_a(a, new_url, cursor, branddb, channel)
-                            break
+        group_a = (
+            "SELECT site_url FROM shoe_sites WHERE site_group = 'A'")
+        await cursor.execute(group_a)
+        group_a_list = [a for b in await cursor.fetchall()
+                        for a in b]
+        for a in group_a_list:
+            if a in new_url:
+                await add_group_a(a, new_url, cursor, branddb, channel)
+                break
 
-                    group_b = (
-                        "SELECT site_url FROM shoe_sites WHERE site_group = 'B'")
-                    await cursor.execute(group_b)
-                    group_b_list = [a for b in await cursor.fetchall()
-                                    for a in b]
-                    for sb in group_b_list:
-                        if sb in new_url:
-                            await add_group_b(sb, new_url, cursor, branddb, channel)
-                            break
+        group_b = (
+            "SELECT site_url FROM shoe_sites WHERE site_group = 'B'")
+        await cursor.execute(group_b)
+        group_b_list = [a for b in await cursor.fetchall()
+                        for a in b]
+        for sb in group_b_list:
+            if sb in new_url:
+                await add_group_b(sb, new_url, cursor, branddb, channel)
+                break
 
-                    group_c = (
-                        "SELECT site_url FROM shoe_sites WHERE site_group = 'C'")
-                    await cursor.execute(group_c)
-                    group_c_list = [a for b in await cursor.fetchall()
-                                    for a in b]
-                    for c in group_c_list:
-                        if c in new_url:
-                            await channel.send("Snipes is a nogo")
-                            break
+        group_c = (
+            "SELECT site_url FROM shoe_sites WHERE site_group = 'C'")
+        await cursor.execute(group_c)
+        group_c_list = [a for b in await cursor.fetchall()
+                        for a in b]
+        for c in group_c_list:
+            if c in new_url:
+                await channel.send("Snipes is a nogo")
+                break
 
-                    group_d = (
-                        "SELECT site_url FROM shoe_sites WHERE site_group = 'D'")
-                    await cursor.execute(group_d)
-                    group_d_list = [a for b in await cursor.fetchall()
-                                    for a in b]
-                    for d in group_d_list:
-                        if d in new_url:
-                            await add_group_d(new_url, cursor, branddb, channel)
-                            break
+        group_d = (
+            "SELECT site_url FROM shoe_sites WHERE site_group = 'D'")
+        await cursor.execute(group_d)
+        group_d_list = [a for b in await cursor.fetchall()
+                        for a in b]
+        for d in group_d_list:
+            if d in new_url:
+                await add_group_d(new_url, cursor, branddb, channel)
+                break
 
 # search for shoe
 
