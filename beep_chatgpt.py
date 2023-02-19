@@ -14,7 +14,7 @@ punct = [".", "?", "!"
          ]
 
 
-async def handle_message(aiomysql, openai, message):
+async def handle_message(aiomysql, openai, message, channel):
 
     punct_message = message.content.endswith(('.', '?', '!'))
     discord_user_id = message.author.id
@@ -42,7 +42,7 @@ async def handle_message(aiomysql, openai, message):
                 else:
                     print("known user")
 
-                user_id = result[0]
+                # user_id = result[0]
                 # message_dict = await message_to_dict(message)
                 # params = {'prompt': message_dict['content']}
                 # message_content = message.content + "."
@@ -69,10 +69,14 @@ async def handle_message(aiomysql, openai, message):
 
                     # Send generated text back to Discord
                     print(f"Beep:{generated_text}")
-                    await message.channel.send(generated_text)
+                    print(message.channel)
+                    print(message.channel.id)
+                    print(message.author.id)
+                    print(message.author)
+                    await channel.send(generated_text)
                     # await channel.send("gr^^^")
-                    insert_interaction_query = "INSERT INTO interactions (user_id, context, bot_response) VALUES (%s, %s, %s)"
-                    await cursor.execute(insert_interaction_query, (user_id, message.content, generated_text))
+                    insert_interaction_query = "INSERT INTO interactions (discord_user_id, context, bot_response, thread_id, thread_name) VALUES (%s, %s, %s, %s, %s)"
+                    await cursor.execute(insert_interaction_query, (discord_user_id, message.content, generated_text, channel.id, channel))
                     await conn.commit()
 
     # result = await handle_message(discord_user_id, username, message)

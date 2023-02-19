@@ -126,9 +126,9 @@ You can ask me questions about stuff and things
 @bot.event
 async def on_member_join(member):
     '''when new member joins guild'''
-    if member.id == bot.id:
+    if member.id == bot.user.id:
         return
-    channel = discord.utils.get(bot.guilds[0].channels, name="home")
+    channel = bot.get_channel(home_channel)
     aiohttp_logger = logging.getLogger('aiohttp.client')
     aiohttp_logger.setLevel(logging.WARNING)
     async with aiohttp.ClientSession() as session:
@@ -146,6 +146,154 @@ async def on_member_join(member):
     channel = discord.utils.get(bot.guilds[0].channels, name="home")
     response = f"Welcome Welcome Welcome, {member.name}."
     await channel.send(response)
+
+
+# @bot.event
+# async def on_forum_post_create(forum: discord.ForumChannel, thread: discord.ForumChannel.thread, post: discord.Post):
+#     async with aiomysql.create_pool(
+#         host='localhost',
+#         port=3306,
+#         user='root',
+#         password='root',
+#         db='interactions'
+#     ) as interact_db:
+#         async with interact_db.acquire() as beep_stages:
+#             async with beep_stages.cursor() as cursor:
+#                 forum_id = forum.id
+#                 thread_id = thread.id
+#                 post_id = post.id
+#                 print(forum_id, thread_id, post_id)
+#                 new_post = f"INSERT INTO interactions (forum_id, thread_id, post_id) VALUES ('{forum_id}', '{thread_id}', '{post_id}')"
+#                 print(new_post)
+#                 await cursor.execute(new_post)
+#                 await beep_stages.commit()
+#                 await thread.send("Talk to me")
+
+@bot.event
+async def on_reaction_add(reaction, user):
+    print("1")
+    message = reaction.message
+    channel = message.channel
+    embeds = message.embeds
+    click_emoji = reaction.emoji
+    if user.id != message.author.id:
+        print("2")
+        async with aiomysql.create_pool(
+            host='localhost',
+            port=3306,
+            user='root',
+            password='root',
+            db='shoe_brands'
+        ) as shoe_db:
+            async with shoe_db.acquire() as branddb:
+                async with branddb.cursor() as cursor:
+                    await cursor.execute("SELECT site_url FROM shoe_sites")
+                    br_table = await cursor.fetchall()
+                    br_table_array = [a for b in br_table for a in b]
+                    br_list = '\n'.join(br_table_array)
+
+                    if click_emoji == "👀":
+                        await channel.send(br_list)
+                        return
+
+                    if click_emoji == "👟":
+                        s_h = ("SELECT name FROM shoes")
+                        await cursor.execute(s_h)
+                        shoe_table = await cursor.fetchall()
+                        shoe_table_array = [a for b in shoe_table for a in b]
+                        shoe_list = '\n'.join(shoe_table_array)
+                        await channel.send(shoe_list)
+                        return
+
+                    if click_emoji == "💵":
+                        await channel.send("type find style STYLECODE")
+
+                    if click_emoji == "🔍":
+                        await channel.send("type gimme KEYWORD")
+
+                    if click_emoji == "🤬":
+                        await channel.send('''*
+    **********************>
+    ****COMMANDS..........>
+    ****..................>
+    ****site list.........>
+    ****shoe list.........>
+    ****find style........>
+    ****add...............>
+    ****delete............>
+    ****gimme.............>
+    ****freshen up beep>..>
+    ****help..............>
+    ****..................>
+    **********************>''')
+
+                    if click_emoji == "❓":
+                        await channel.send('''*
+    ***ADD SHOE TO DB
+        Send link to add shoe! As long as
+         the site is in site list you str8!
+    
+    
+    ***CHECK SITE LIST
+        Check the site list by sending
+         "site list". No site in list?
+    
+    
+    ***AD SITE TO DB
+        Send "add" then the site followed
+         by the appropriate format letter.
+    
+        a, b, c, or d. "www.store.com a"
+    
+        *Don't worry about
+        the rest(?=>) part of the url*
+    
+    
+        Format A
+        .com/blah/n-a-m-e/scORsku
+    
+        Format B
+        .com/blah/n-a-m-e-sc-sc
+    
+        Format C
+        dont work
+    
+        Format D
+        .com/blah/n-a-m-e-sc
+    
+    
+    ***ADDING MULTIPLE ITEMS
+        Multi-link input only registers the
+        sites coming from the first in the
+        list. Seper■ate them with a , .
+    
+        https://www.n.com/no/win,
+        www.f.com/af/shoe-09, www.g.com/e,
+        http://www.flb.com/clo
+    
+    
+    ***CHECK SHOE LIST
+        Check all shoes list in the db by
+         sending "shoe list"
+    
+    
+    ***CHECK CURRENT PRICE
+        Check for current prices in db by
+         sending "find style" followed by
+         the style code.One code at a time
+    
+        find style CHJKS-9878
+    
+    
+    ***REFRESH PROXIES
+        Refresh the proxies by sending
+        "freshen up beep"
+    
+    
+    ***SEARCH DB
+        Search for shoes in database by
+        sending "gimme" followed by search
+        words''')
 
 
 @bot.event
@@ -175,63 +323,64 @@ async def on_message(message):
                 if where_msg == home_channel:
                     home_good = ("site list", "shoe list",
                                  "find style", "gimme", "help")
-                    if where_msg == add_shoe_channel:
-                        if any(message.content.startswith(good) for good in home_good):
-                            await message.delete()
-                            await channel.send("Dirty work in your thread please")
-                        else:
-                            addstr = "add"
-                            if lowermsg.startswith(addstr):
-                                await add_site(br_table_array,
-                                               message,
-                                               channel,
-                                               cursor,
-                                               branddb,
-                                               br_list)
+                    if any(message.content.startswith(good) for good in home_good):
+                        await message.delete()
+                        await channel.send("Dirty work in your thread please")
+                    else:
+                        addstr = "add"
+                        if lowermsg.startswith(addstr):
+                            await add_site(br_table_array,
+                                           message,
+                                           channel,
+                                           cursor,
+                                           branddb,
+                                           br_list)
 
-                            delete = "delete"
-                            if lowermsg.startswith(delete):
-                                await del_site(br_table_array,
-                                               message,
-                                               channel,
-                                               cursor,
-                                               branddb)
-                            # refresh proxies
-                            if "freshen up beep" in message.content.lower():
-                                aiohttp_logger = logging.getLogger(
-                                    'aiohttp.client')
-                                aiohttp_logger.setLevel(logging.WARNING)
-                                async with aiohttp.ClientSession() as session:
-                                    async with session.get(f'https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=ill+be+back&limit=10') as response:
-                                        if response.status == 200:
-                                            gifs_list = await response.json()
-                                            gifs = gifs_list["data"]
-                                            if gifs:
-                                                gif = random.choice(gifs)[
-                                                    "url"]
-                                                await channel.send(gif)
-                                            else:
-                                                logger.warning("No gifs")
+                        delete = "delete"
+                        if lowermsg.startswith(delete):
+                            await del_site(br_table_array,
+                                           message,
+                                           channel,
+                                           cursor,
+                                           branddb)
+                        # refresh proxies
+                        if "freshen up beep" in message.content.lower():
+                            aiohttp_logger = logging.getLogger(
+                                'aiohttp.client')
+                            aiohttp_logger.setLevel(logging.WARNING)
+                            async with aiohttp.ClientSession() as session:
+                                async with session.get(f'https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=ill+be+back&limit=10') as response:
+                                    if response.status == 200:
+                                        gifs_list = await response.json()
+                                        gifs = gifs_list["data"]
+                                        if gifs:
+                                            gif = random.choice(gifs)[
+                                                "url"]
+                                            await channel.send(gif)
                                         else:
-                                            logger.error(
-                                                f"Received {response.status}")
-                                await fresh_while_on(aiofiles, current_new_proxies)
-                                await check_while_on(aiofiles,
-                                                     aiohttp,
-                                                     asyncio,
-                                                     random,
-                                                     ip_token,
-                                                     channel)
+                                            logger.warning("No gifs")
+                                    else:
+                                        logger.error(
+                                            f"Received {response.status}")
+                            await fresh_while_on(aiofiles, current_new_proxies)
+                            await check_while_on(aiofiles,
+                                                 aiohttp,
+                                                 asyncio,
+                                                 random,
+                                                 ip_token,
+                                                 channel)
+
+                        if "new thread" in lowermsg:
+                            author = message.author
+                            await make_new_thread(discord, bot, asyncio, message, check, channel, author)
+
+                # if message.channel.type == discord.ChannelType.Forum:
 
                 if isinstance(channel, discord.Thread):
                     greets = ['hey beep', 'yo beep', 'ay beep',
                               'le beep', 'sir beep', 'hey boop',
                               'yo boop', 'ay boop', 'le boop', 'sir boop']
                     nanis = ["nani", "nani?", "nani?!"]
-
-                    if "new thread" in lowermsg:
-                        author = message.author
-                        await make_new_thread(discord, bot, asyncio, message, check, channel, author)
 
                     # message responses
                     for greet in greets:
@@ -333,76 +482,9 @@ async def on_message(message):
             ****..................>
             **********************>''')
 
-                    if "help" in message.content.lower():
-                        await channel.send('''*
-            ***ADD SHOE TO DB
-                Send link to add shoe! As long as
-                 the site is in site list you str8!
-
-
-            ***CHECK SITE LIST
-                Check the site list by sending
-                 "site list". No site in list?
-
-
-            ***AD SITE TO DB
-                Send "add" then the site followed
-                 by the appropriate format letter.
-
-                a, b, c, or d. "www.store.com a"
-
-                *Don't worry about
-                the rest(?=>) part of the url*
-
-
-                Format A
-                .com/blah/n-a-m-e/scORsku
-
-                Format B
-                .com/blah/n-a-m-e-sc-sc
-
-                Format C
-                dont work
-
-                Format D
-                .com/blah/n-a-m-e-sc
-
-
-            ***ADDING MULTIPLE ITEMS
-                Multi-link input only registers the
-                sites coming from the first in the
-                list. Seper■ate them with a , .
-
-                https://www.n.com/no/win,
-                www.f.com/af/shoe-09, www.g.com/e,
-                http://www.flb.com/clo
-
-
-            ***CHECK SHOE LIST
-                Check all shoes list in the db by
-                 sending "shoe list"
-
-
-            ***CHECK CURRENT PRICE
-                Check for current prices in db by
-                 sending "find style" followed by
-                 the style code.One code at a time
-
-                find style CHJKS-9878
-
-
-            ***REFRESH PROXIES
-                Refresh the proxies by sending
-                "freshen up beep"
-
-
-            ***SEARCH DB
-                Search for shoes in database by
-                sending "gimme" followed by search
-                words''')
-
                 ###BEEPAI###
-                    await handle_message(aiomysql, openai, message)
+                if isinstance(channel, discord.Thread) and not channel.id == home_channel:
+                    await handle_message(aiomysql, openai, message, channel)
 
                 # add shoe to db
                 if message.channel.id == add_shoe_channel:
@@ -417,6 +499,24 @@ async def on_message(message):
                                            cursor,
                                            branddb,
                                            br_table_array)
+
+    async def beep_channels():
+
+        async with aiomysql.create_pool(
+            host='localhost',
+            port=3306,
+            user='root',
+            password='root',
+            db='beep_channels'
+        ) as beep_ch:
+            async with beep_ch.acquire() as beep_chan:
+                async with beep_chan.cursor() as cursor:
+                    channel_id = channel.id
+                    channel_name = channel
+                    discord_user_id = channel.author.id
+                    insert_channels = f"INSERT INTO beep_channels (thread_id, thread_name, discord_user_id) VALUES ('{channel_id}','{channel_name}','{discord_user_id}')"
+                    await cursor.execute(insert_channels)
+                    print()
 
 
 bot.run(TOKEN)

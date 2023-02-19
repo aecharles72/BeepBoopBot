@@ -93,11 +93,12 @@ async def check_while_on(aiofiles, aiohttp, asyncio, random, ip_token, channel):
                     print(res.status)
                     if res.status == 200:
                         valid_proxies.append(proxy)
-                        await asyncio.sleep(random.uniform(1, 5))
+                        await asyncio.sleep(random.uniform(.25))
                     else:
-                        await asyncio.sleep(random.uniform(1, 5))
-                    if await res.status == 429:
+                        await asyncio.sleep(random.uniform(1))
+                    if res.status == 429:
                         await channel.send("429 DEAD")
+                        await asyncio.sleep(random.uniform(3))
                         break
         async with aiofiles.open("valid_proxies.txt", "w") as v:
             await v.write("\n".join(valid_proxies))
@@ -304,15 +305,32 @@ async def new_thread(discord, bot, message, channel, thread_name, thread_reason)
     text_channel = discord.utils.get(message.guild.channels, name='threads')
     if not text_channel:
         text_channel = await channel.category.create_text_channel('threads')
+    overwrites = {
+        message.author: discord.PermissionOverwrite(read_messages=True, send_messages=True),
+        channel.category.guild.default_role: discord.PermissionOverwrite(
+            read_messages=False)
+    }
     thread = await text_channel.create_thread(
         name=thread_name,
         auto_archive_duration=0,
+        invitable=False,
         reason=thread_reason)
     fresh_thread = discord.utils.get(
         message.guild.threads, name=thread_name)
+    # await fresh_thread.set_permissions(message.author, read_messages=True, send_messages=True)
     await text_channel.send(
         f'"{message.author}" created in {text_channel.mention}!\n{thread.mention}', mention_author=True)
-    await fresh_thread.send(f'{message.author.mention} your private thread')
+    pin_message = await fresh_thread.send('''
+        SITE LIST👀        SHOE LIST👟       FIND STYLE 💵
+
+          GIMME🔍        COMMANDS🤬        HELP❓ ''')
+    await pin_message.add_reaction("👀")
+    await pin_message.add_reaction("👟")
+    await pin_message.add_reaction("💵")
+    await pin_message.add_reaction("🔍")
+    await pin_message.add_reaction("🤬")
+    await pin_message.add_reaction("❓")
+    await pin_message.pin()
 
 
 async def make_new_thread(discord, bot, asyncio, message, check, channel, author):
