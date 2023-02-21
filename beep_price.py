@@ -1,6 +1,24 @@
-# -*- coding: utf-8 -*-
-# price checking
-async def find_style_code(aiohttp, aiomysql, BeautifulSoup, asyncio, random, headers_rotate, message, home_channel, channel, cursor, branddb):
+"""
+Beep content checker
+
+"""
+
+
+async def find_style_code(aiohttp,
+                          BeautifulSoup,
+                          asyncio,
+                          random,
+                          headers_rotate,
+                          message,
+                          home_channel,
+                          channel,
+                          cursor,
+                          branddb):
+
+    """
+    # price checking
+
+    """
     if message.channel.id == home_channel:
         strip_m = message.content[10:]
         strip_mess = strip_m.strip(" ").split(",")
@@ -25,7 +43,7 @@ async def find_style_code(aiohttp, aiomysql, BeautifulSoup, asyncio, random, hea
                 # await channel.send(sc_url_list)
                 for s in sc_url_list:
                     # await channel.send(s)
-                    with open("valid_proxies.txt", "r") as vp:
+                    with open("valid_proxies.txt", "r", encoding="utf-8") as vp:
                         await channel.send("spinning")
                         try:
                             success = False
@@ -58,22 +76,27 @@ async def find_style_code(aiohttp, aiomysql, BeautifulSoup, asyncio, random, hea
                                                     ":").pop(-1)
                                                 # await channel.send(nike_color)
                                                 print("1")
-                                                color_query = f"UPDATE shoes SET color = '{nike_color}' WHERE url = '{s}'"
+                                                color_query = f"UPDATE shoes SET color =\
+                                                    '{nike_color}' WHERE url = '{s}'"
                                                 await cursor.execute(color_query)
-                                                price_query = f"SELECT price FROM shoes WHERE url = '{s}'"
+                                                price_query = f"SELECT price FROM shoes WHERE url =\
+                                                    '{s}'"
                                                 await cursor.execute(price_query)
                                                 price_q = await cursor.fetchone()
                                                 print("2")
                                                 # await channel.send(price_q)
                                                 if price_q[0] == None:
-                                                    insert_query = f"UPDATE shoes SET price = '{nike_current_price}' WHERE url = '{s}'"
+                                                    insert_query = f"UPDATE shoes SET price =\
+                                                        '{nike_current_price}' WHERE url = '{s}'"
                                                 else:
                                                     # await channel.send(price_q[0])
-                                                    insert_query = f"UPDATE shoes SET current_price = '{nike_current_price}' WHERE url = '{s}'"
+                                                    insert_query = f"UPDATE shoes SET current_price\
+                                                        = '{nike_current_price}' WHERE url = '{s}'"
                                                 await cursor.execute(insert_query)
                                                 print("3")
                                                 await branddb.commit()
-                                                await channel.send(f"current {nike_current_price} old {price_q}")
+                                                await channel.send(f"current {nike_current_price}\
+                                                                   old {price_q}")
                                                 await channel.send(s)
                                                 break
                                             else:
@@ -102,7 +125,8 @@ async def find_style_code(aiohttp, aiomysql, BeautifulSoup, asyncio, random, hea
                                     print(
                                         f"using the proxy: {proxy.strip()}")
                                     async with aiohttp.ClientSession() as fl_session:
-                                        async with fl_session.get(fl_s, headers=headers_rotate) as response:
+                                        async with fl_session.get(fl_s, headers=headers_rotate
+                                                                  ) as response:
                                             print(response)
                                             print(response.status)
                                             if response.status == 200:
@@ -115,7 +139,8 @@ async def find_style_code(aiohttp, aiomysql, BeautifulSoup, asyncio, random, hea
                                                     "span", {"class": "ProductPrice"}).get_text()
                                                 print("2")
                                                 insert_query = (
-                                                    f"UPDATE shoes SET price = '{fl_current_price}' WHERE url = '{s}';")
+                                                    f"UPDATE shoes SET price =\
+                                                        '{fl_current_price}' WHERE url = '{s}';")
                                                 cursor.execute(
                                                     insert_query)
                                                 branddb.commit()
@@ -152,9 +177,12 @@ async def find_style_code(aiohttp, aiomysql, BeautifulSoup, asyncio, random, hea
                                                 soup = BeautifulSoup(
                                                     text_content, 'html.parser')
                                                 dicks_current_price = soup(
-                                                    "span", {"class": "product-price ng-star-inserted"}).get_text()
+                                                    "span", {
+                                                        "class": "product-price ng-star-inserted"
+                                                    }).get_text()
                                                 insert_query = (
-                                                    f"UPDATE shoes SET price = '{dicks_current_price}' WHERE url = '{s}';")
+                                                    f"UPDATE shoes SET price =\
+                                                        '{dicks_current_price}' WHERE url = '{s}';")
                                                 cursor.execute(
                                                     insert_query)
                                                 branddb.commit()
@@ -196,7 +224,8 @@ async def find_style_code(aiohttp, aiomysql, BeautifulSoup, asyncio, random, hea
                                                     }).get_text
                                                 nord_current_price['aria-hidden'] = 'false'
                                                 insert_query = (
-                                                    f"UPDATE shoes SET price = '{nord_current_price}' WHERE url = '{s}';")
+                                                    f"UPDATE shoes SET price =\
+                                                        '{nord_current_price}' WHERE url = '{s}';")
                                                 cursor.execute(
                                                     insert_query)
                                                 branddb.commit()
@@ -234,7 +263,8 @@ async def find_style_code(aiohttp, aiomysql, BeautifulSoup, asyncio, random, hea
                                                 mrp_current_price = soup.find(
                                                     "span", {"itemprop": "price"}).get_text()
                                                 insert_query = (
-                                                    f"UPDATE shoes SET price = '{mrp_current_price}' WHERE url = '{s}';")
+                                                    f"UPDATE shoes SET price =\
+                                                        '{mrp_current_price}' WHERE url = '{s}';")
                                                 cursor.execute(
                                                     insert_query)
                                                 await branddb.commit()
@@ -272,7 +302,9 @@ async def find_style_code(aiohttp, aiomysql, BeautifulSoup, asyncio, random, hea
                                                 finish_current_price = soup.find(
                                                     "div", {"class": "productPrice"}).get_text()
                                                 insert_query = (
-                                                    f"UPDATE shoes SET price = '{finish_current_price}' WHERE url = '{s}';")
+                                                    f"UPDATE shoes SET price =\
+                                                        '{finish_current_price}'\
+                                                            WHERE url = '{s}';")
                                                 cursor.execute(
                                                     insert_query)
                                                 branddb.commit()
@@ -308,9 +340,12 @@ async def find_style_code(aiohttp, aiomysql, BeautifulSoup, asyncio, random, hea
                                                 soup = BeautifulSoup(
                                                     text_content, 'html.parser')
                                                 footpatrol_current_price = soup.find(
-                                                    "span", {"data-e2e": "product-price"}).get_text()
+                                                    "span", {"data-e2e":
+                                                             "product-price"}).get_text()
                                                 insert_query = (
-                                                    f"UPDATE shoes SET price = '{footpatrol_current_price}' WHERE url = '{s}';")
+                                                    f"UPDATE shoes SET price = \
+                                                        '{footpatrol_current_price}\
+                                                            ' WHERE url = '{s}';")
                                                 cursor.execute(
                                                     insert_query)
                                                 branddb.commit()
@@ -346,9 +381,11 @@ async def find_style_code(aiohttp, aiomysql, BeautifulSoup, asyncio, random, hea
                                                 soup = BeautifulSoup(
                                                     text_content, 'html.parser')
                                                 hips_current_price = soup.find(
-                                                    "span", {"data-e2e": "product-price"}).get_text()
+                                                    "span", {
+                                                        "data-e2e": "product-price"}).get_text()
                                                 insert_query = (
-                                                    f"UPDATE shoes SET price = '{hips_current_price}' WHERE url = '{s}';")
+                                                    f"UPDATE shoes SET price = \
+                                                        '{hips_current_price}' WHERE url = '{s}';")
                                                 cursor.execute(
                                                     insert_query)
                                                 branddb.commit()
@@ -384,9 +421,11 @@ async def find_style_code(aiohttp, aiomysql, BeautifulSoup, asyncio, random, hea
                                                 soup = BeautifulSoup(
                                                     text_content, 'html.parser')
                                                 size_current_price = soup.find(
-                                                    "span", {"data-e2e": "product-price"}).get_text()
+                                                    "span", {
+                                                        "data-e2e": "product-price"}).get_text()
                                                 insert_query = (
-                                                    f"UPDATE shoes SET price = '{size_current_price}' WHERE url = '{s}';")
+                                                    f"UPDATE shoes SET price = \
+                                                        '{size_current_price}' WHERE url = '{s}';")
                                                 cursor.execute(
                                                     insert_query)
                                                 branddb.commit()
@@ -407,6 +446,6 @@ async def find_style_code(aiohttp, aiomysql, BeautifulSoup, asyncio, random, hea
                                                 break
                             else:
                                 await channel.send(f"{s} \n Na son, cloudfare\n")
-                        except:
+                        except print("beep price failed"):
                             continue
                     await channel.send("Done")
