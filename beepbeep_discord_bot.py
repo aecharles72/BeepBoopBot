@@ -26,6 +26,8 @@ Beep Boop Bot Main
 import os
 import random
 import time
+import datetime
+from datetime import timezone
 import asyncio
 import nest_asyncio
 import aiohttp
@@ -79,7 +81,8 @@ with open("user_agents.txt", "r", encoding="utf-8") as ua:
     print(headers_rotate)
 
 headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36'}
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,\
+        like Gecko) Chrome/109.0.0.0 Safari/537.36'}
 print(headers)
 
 # proxy info
@@ -100,7 +103,15 @@ startup_proxies(requests, time, random, now_time,
 
 @bot.event
 async def on_ready():
-    '''boot the bot up'''
+    '''
+    DESCRIPTION.
+    boot the bot up
+
+    Returns
+    -------
+    None.
+
+    '''
     print(f'{bot.user} has connected to Discord!')
     channel = discord.utils.get(bot.guilds[0].channels, name="home")
     async with aiohttp.ClientSession() as session:
@@ -125,7 +136,21 @@ You can ask me questions about stuff and things
 
 @bot.event
 async def on_member_join(member):
-    '''when new member joins guild'''
+    '''
+
+
+    Parameters
+    ----------
+    member : TYPE
+        DESCRIPTION.
+        when new member joins guild
+
+    Returns
+    -------
+    None.
+
+    '''
+
     if member.id == bot.user.id:
         return
     channel = bot.get_channel(home_channel)
@@ -144,45 +169,36 @@ async def on_member_join(member):
     await channel.send(response)
 
 
-# @bot.event
-# async def on_forum_post_create(forum: discord.ForumChannel, thread: discord.ForumChannel.thread, post: discord.Post):
-#     async with aiomysql.create_pool(
-#         host='localhost',
-#         port=3306,
-#         user='root',
-#         password='root',
-#         db='interactions'
-#     ) as interact_db:
-#         async with interact_db.acquire() as beep_stages:
-#             async with beep_stages.cursor() as cursor:
-#                 forum_id = forum.id
-#                 thread_id = thread.id
-#                 post_id = post.id
-#                 print(forum_id, thread_id, post_id)
-#                 new_post = f"INSERT INTO interactions (
-    # forum_id, thread_id, post_id) VALUES (
-    #     '{forum_id}', '{thread_id}', '{post_id}'
-    #     )"
-#                 print(new_post)
-#                 await cursor.execute(new_post)
-#                 await beep_stages.commit()
-#                 await thread.send("Talk to me")
-
-# triggers when any emote is added
 @bot.event
 async def on_raw_reaction_add(payload):
-    print("e1")
-    message = payload.message_id
-    print(message)
+    '''
+
+
+    Parameters
+    ----------
+    payload : TYPE
+        DESCRIPTION.
+        triggers when any emote is added
+
+    Returns
+    -------
+    None.
+
+    '''
+
+    print("RAW: EMO: 1")
+    message_id = payload.message_id
+    print(f"RAW EMO: {message_id}")
     pay_channel = payload.channel_id
     channel = bot.get_channel(pay_channel)
-    print(channel)
+    message = await channel.fetch_message(message_id)
+    print(f"RAW EMO: {channel}")
     member = payload.member
-    print(member)
+    print(f"RAW EMO: {member}")
     # embeds = payload.message.embeds
     click_emoji = payload.emoji
     # if user.id != payload.message.author.id:
-    print("e2")
+    print("RAW EMO: 2")
     async with aiomysql.create_pool(
         host='localhost',
         port=3306,
@@ -196,12 +212,23 @@ async def on_raw_reaction_add(payload):
                 br_table = await cursor.fetchall()
                 br_table_array = [a for b in br_table for a in b]
                 br_list = '\n'.join(br_table_array)
-                print("e3")
+                now_datetime = datetime.datetime.now(timezone.utc)
+                now_datetime_s = now_datetime.timestamp()
+                mess_create = message.created_at
+                mess_create_s = mess_create.timestamp()
+                time_diff = (now_datetime_s - mess_create_s)
+                print(f"RAW EMO: {message.created_at}")
+                print(f"RAW EMO: {now_datetime}")
+                print(f"RAW EMO: {time_diff}")
+                if time_diff <= 12:
+                    print("RAW EMO: less")
+                    return
+                print("RAW EMO: 3")
                 if click_emoji == discord.PartialEmoji(name='👀'):
                     send_list = await channel.send(br_list)
                     await send_list.delete(delay=15)
                     return
-                print("e4")
+                print("RAW EMO: 4")
                 if click_emoji == discord.PartialEmoji(name='👟'):
                     s_h = ("SELECT name FROM shoes")
                     await cursor.execute(s_h)
@@ -211,7 +238,7 @@ async def on_raw_reaction_add(payload):
                     send_shoe = await channel.send(shoe_list)
                     await send_shoe.delete(delay=30)
                     return
-                print("e5")
+                print("RAW EMO: 5")
                 if click_emoji == discord.PartialEmoji(name='💵'):
                     style_send = await channel.send('''*
     ***CHECK CURRENT PRICE
@@ -221,9 +248,10 @@ async def on_raw_reaction_add(payload):
     
         e.) find style CHJKS-9878''')
                     await style_send.delete(delay=30)
-                print("e6")
+                print("RAW EMO: 6")
                 if click_emoji == discord.PartialEmoji(name='📚'):
-                    add_send = await channel.send('<https://discord.com/channels/1069760567692230676/1076734799823257624>')
+                    add_send = await channel.send(
+                        '<https://discord.com/channels/1069760567692230676/1076734799823257624>')
                     await channel.send('''*
     ***ADD SHOE TO DB
         Click the link below
@@ -232,7 +260,7 @@ async def on_raw_reaction_add(payload):
         list you str8!''')
                     await add_send.delete(delay=10)
 
-                print("e7")
+                print("RAW EMO: 7")
                 if click_emoji == discord.PartialEmoji(name='🔍'):
                     gimme_send = await channel.send('''*
     ***SEARCH DB
@@ -243,7 +271,7 @@ async def on_raw_reaction_add(payload):
             type gimme KEYWORD''')
                     await gimme_send.delete(delay=10)
 
-                print("e8")
+                print("RAW EMO: 8")
                 if click_emoji == discord.PartialEmoji(name='👍🏾'):
                     add_site_send = await channel.send('''*
     ***ADD SITE TO DB
@@ -265,14 +293,14 @@ async def on_raw_reaction_add(payload):
         .com/blah/n-a-m-e-sc''')
                     await add_site_send.delete(delay=20)
 
-                print("e9")
+                print("RAW EMO: 9")
                 if click_emoji == discord.PartialEmoji(name='👎🏾'):
                     del_site_send = await channel.send('''*
     ***DELETE SITE IN DB
         Send "delete" then the site''')
                     await del_site_send.delete(delay=20)
 
-                print("e10")
+                print("RAW EMO: 10")
                 if click_emoji == discord.PartialEmoji(name='🌪️'):
                     async with aiohttp.ClientSession() as session:
                         async with session.get(
@@ -298,11 +326,11 @@ async def on_raw_reaction_add(payload):
                                          channel)
                     await gimme_send.delete(delay=10)
 
-                print("e12")
-                if click_emoji == discord.PartialEmoji(name='🧹'):
-                    await channel.delete_messages()
+                print("RAW EMO: 12")
+                if click_emoji == discord.PartialEmoji(name='🧹'):  # PURGE THREAD
+                    await channel.purge(after=mess_create)
 
-                print("e13")
+                print("RAW EMO: 13")
                 if click_emoji == discord.PartialEmoji(name='🤬'):
                     com_send = await channel.send('''*
     **********************>
@@ -319,7 +347,7 @@ async def on_raw_reaction_add(payload):
     ****..................>
     **********************>''')
                     await com_send.delete(delay=30)
-                print("e14")
+                print("RAW EMO: 14")
                 if click_emoji == discord.PartialEmoji(name='❓'):
                     help_send = await channel.send('''*
     ***ADD SHOE TO DB
@@ -390,14 +418,27 @@ async def on_raw_reaction_add(payload):
 
 @bot.event
 async def on_message(message):
-    '''when member send a message in a channel'''
+    '''
+
+
+    Parameters
+    ----------
+    message : TYPE v
+        DESCRIPTION.
+        when member send a message in a channel
+
+    Returns
+    -------
+    None.
+
+    '''
 
     # prevent bot replying to bot
     if message.author == bot.user:
         return
 
     # get channel info of guild
-    await beep_channels(aiomysql, message)
+    await beep_channels(discord, aiomysql, message)
 
     # connect to shoe brands db asynchronously
     async with aiomysql.create_pool(
@@ -416,6 +457,10 @@ async def on_message(message):
                 channel = message.channel
                 lowermsg = message.content.lower()
                 where_msg = message.channel.id
+
+                purge = 'beep clean'
+                if lowermsg.startswith(purge):
+                    await channel.purge()
 
                 # only messages sent in home
                 if where_msg == home_channel:
@@ -442,7 +487,7 @@ async def on_message(message):
                                            cursor,
                                            branddb)
                         # refresh proxies
-                        if "freshen up beep" in message.content.lower():
+                        if "freshen up beep" == message.content.lower():
                             async with aiohttp.ClientSession() as session:
                                 async with session.get(
                                     f'https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=ill+be+back&limit=10'
@@ -462,9 +507,9 @@ async def on_message(message):
                                                  channel)
 
                         # create a new thread
-                        if "new thread" in lowermsg:
+                        if "new thread" == lowermsg:
                             author = message.author
-                            await make_new_thread(discord, asyncio, message, check, channel, author)
+                            await make_new_thread(aiomysql, discord, bot, asyncio, message, check, channel, author)
 
                 # only messages sent in threads
                 if isinstance(channel, discord.Thread):
@@ -625,13 +670,13 @@ async def on_message(message):
                     await handle_message(aiomysql, openai, message, channel)
 
                 # add shoe to db
-                print(message.channel.id)
-                print(add_shoe_channel)
+                print(f"ADDSHO: {message.channel.id}")
+                print(f"ADDSHO: E{add_shoe_channel}")
                 if message.channel.id == add_shoe_channel:
-                    print("shoe1")
+                    print("ADDSHOE: shoe1")
                     a_s_good = ("http", "www", "https", "got")
                     if where_msg == add_shoe_channel:
-                        print("2")
+                        print("ADDSHOE: 2")
                         if not any(message.content.startswith(good) for good in a_s_good):
                             await message.delete()
                         else:
@@ -642,5 +687,45 @@ async def on_message(message):
                                            branddb,
                                            br_table_array)
 
+
+@bot.event
+async def on_raw_thread_delete(payload):
+    '''
+    Parameters
+    ----------
+    payload : TYPE dict
+        DESCRIPTION.
+        rename channel when deleted
+
+    Returns
+    -------
+    None.
+
+    '''
+    channel_id = payload.thread.id
+    print(f"THRDEL: {channel_id} deleted")
+    date_time = datetime.datetime.now(timezone.utc)
+    thread_name = payload.thread.name
+    print(f"THRDEL: {thread_name} deleted")
+    async with aiomysql.create_pool(
+        host='localhost',
+        port=3306,
+        user='root',
+        password='root',
+        db='beep_ai'
+    ) as beep_ch:
+        async with beep_ch.acquire() as beep_chan:
+            async with beep_chan.cursor() as beep_chan_cursor:
+                is_it = f"SELECT thread_name FROM beep_channels WHERE thread_name = '{thread_name}'"
+                await beep_chan_cursor.execute(is_it)
+                it_is = await beep_chan_cursor.fetchone()
+                if it_is is None:
+                    return
+                arch_channel = "UPDATE beep_channels SET thread_name = '{}' WHERE thread_id = '{}'"
+                arch_channel = arch_channel.format(
+                    thread_name + " DELETED " + str(date_time), channel_id)
+                print(f"THRDEL: {arch_channel}")
+                await beep_chan_cursor.execute(arch_channel)
+                await beep_chan.commit()
 
 bot.run(TOKEN)

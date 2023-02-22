@@ -6,17 +6,33 @@ Beep functions
 
 def startup_proxies(
         requests, time, random, now_time, modified_file_time, current_new_proxies, ip_token):
-    """
-    # startup proxy list setup
+    '''
 
-    """
+
+    Parameters
+    ----------
+    requests : TYPE lib
+    time : TYPE lib
+    random : TYPE lib
+    now_time : TYPE v
+    modified_file_time : TYPE v
+    current_new_proxies : TYPE v
+    ip_token : TYPE env
+        DESCRIPTION.
+        startup proxy list setup
+
+    Returns
+    -------
+    None.
+
+    '''
     if now_time - modified_file_time > 1800:
         with open("proxy_list.txt", "w", encoding="utf-8") as p_l:
-            print(now_time)
-            print(modified_file_time)
+            print(f"START: {now_time}")
+            print(f"START: {modified_file_time}")
             fresh_proxie = current_new_proxies[75:]
             p_l.write(fresh_proxie)
-            print("Done adding fresh proxies")
+            print("START: Done adding fresh proxies")
             p_l.close()
         with open("proxy_list.txt", "r", encoding="utf-8") as o_l:
             proxies = o_l.read().split("\n")
@@ -24,9 +40,9 @@ def startup_proxies(
             for proxy in proxies:
                 check_p = proxy.split(":").pop(0)
                 checker = f"https://ipinfo.io/{check_p}/json?token={ip_token}"
-                print(proxy)
+                print(f"START: {proxy}")
                 with requests.get(checker) as res:
-                    print(res.status_code)
+                    print(f"START: {res.status_code}")
                     if res.status_code == 200:
                         valid_proxies.append(proxy)
                     else:
@@ -37,21 +53,37 @@ def startup_proxies(
 
         with open("valid_proxies.txt", "w", encoding="utf-8") as v_p:
             v_p.write("\n".join(valid_proxies))
-            print("done check")
+            print(f"START: {now_time}""done check")
             v_p.close()
 
 
 async def add_site(br_table_array, message, channel, cursor, branddb, br_list):
-    """
-    # add site to site list
+    '''
 
-    """
+
+    Parameters
+    ----------
+    br_table_array : TYPE info
+    message : TYPE v
+    channel : TYPE v
+    cursor : TYPE v
+    branddb : TYPE aiodb
+    br_list : TYPE info
+        DESCRIPTION.
+        add site to site list
+
+    Returns
+    -------
+    None.
+
+    '''
     breakdown = message.content.split()
     if breakdown[1] in br_table_array:
         await channel.send('already there man')
         return
     insert_site = (
-        f"INSERT INTO shoe_sites (site_url, site_group) VALUE ('{breakdown[1]}','{breakdown[2].upper()}');")
+        f"INSERT INTO shoe_sites (site_url, site_group) VALUE \
+            ('{breakdown[1]}','{breakdown[2].upper()}');")
     await cursor.execute(insert_site)
     await branddb.commit()
     await channel.send("added")
@@ -60,43 +92,81 @@ async def add_site(br_table_array, message, channel, cursor, branddb, br_list):
 
 
 async def del_site(message, channel, cursor, branddb):
-    """
-    # delete site from site list
+    '''
 
-    """
+
+    Parameters
+    ----------
+    message : TYPE v
+    channel : TYPE v
+    cursor : TYPE v
+    branddb : TYPE aiodb
+        DESCRIPTION.
+        delete site from site list
+
+    Returns
+    -------
+    None.
+
+    '''
     site_to_del = message.content[7:].lower()
-    print(site_to_del)
+    print(f"DELSITE: {site_to_del}")
     find_site = f"SELECT id FROM shoe_sites WHERE site_url = '{site_to_del}'"
-    print(find_site)
+    print(f"DELSITE: {find_site}")
     await cursor.execute(find_site)
     found = await cursor.fetchone()
-    print(found)
+    print(f"DELSITE: {found}")
     found_id = found[0]
-    print(found_id)
+    print(f"DELSITE: {found_id}")
     delete_site = f"DELETE FROM shoe_sites WHERE id = '{found_id}'"
-    print(delete_site)
+    print(f"DELSITE: {delete_site}")
     await cursor.execute(delete_site)
     await branddb.commit()
     await channel.send(f"{found} gone")
 
 
 async def fresh_while_on(aiofiles, current_new_proxies):
-    """
-    # refresh proxy list while running
+    '''
 
-    """
+
+    Parameters
+    ----------
+    aiofiles : TYPE lib
+    current_new_proxies : TYPE v
+        DESCRIPTION.
+        refresh proxy list while running
+
+    Returns
+    -------
+    None.
+
+    '''
     async with aiofiles.open("proxy_list.txt", "w") as p_l:
         fresh_proxies = current_new_proxies[75:]
         await p_l.write(fresh_proxies)
-        print("Done adding fresh proxies")
+        print("FRESHWO: Done adding fresh proxies")
         await p_l.close()
 
 
 async def check_while_on(aiofiles, aiohttp, asyncio, ip_token, channel):
-    """
-    # validate proxies while running
+    '''
 
-    """
+
+    Parameters
+    ----------
+    aiofiles : TYPE lib
+    aiohttp : TYPE lib
+    asyncio : TYPE lib
+    ip_token : TYPE env
+    channel : TYPE v
+        DESCRIPTION.
+        validate proxies while running
+
+    Returns
+    -------
+    None.
+
+    '''
     valid_proxies = []
     print("Begin Check")
     async with aiofiles.open("proxy_list.txt", "r") as p_l:
@@ -107,9 +177,9 @@ async def check_while_on(aiofiles, aiohttp, asyncio, ip_token, channel):
             for proxy in proxies:
                 check_p = proxy.split(":").pop(0)
                 checker = f"https://ipinfo.io/{check_p}/json?token={ip_token}"
-                print(proxy)
+                print(f"CHECKWO: {proxy}")
                 async with session.get(checker) as res:
-                    print(res.status)
+                    print(f"CHECKWO: {res.status}")
                     if res.status == 200:
                         valid_proxies.append(proxy)
                         await asyncio.sleep(.25)
@@ -147,10 +217,24 @@ async def get_soup(aiohttp, BeautifulSoup, s, channel):
 
 
 async def add_group_a(new_url, cursor, branddb, channel, author_id):
-    """
-    # parse an A link
+    '''
 
-    """
+
+    Parameters
+
+    new_url : TYPE v
+    cursor : TYPE v 
+    branddb : TYPE aiodb
+    channel : TYPE v
+    author_id : TYPE v
+        DESCRIPTION.
+        parse an A link
+
+    Returns
+    -------
+    None.
+
+    '''
     if new_url.endswith("/"):
         url = new_url[:-1]
     else:
@@ -187,10 +271,24 @@ async def add_group_a(new_url, cursor, branddb, channel, author_id):
 
 
 async def add_group_b(new_url, cursor, branddb, channel, author_id):
-    """
-    # parse a B link
+    '''
 
-    """
+
+    Parameters
+    ----------
+    new_url : TYPE v
+    cursor : TYPE v
+    branddb : TYPE aiodb
+    channel : TYPE v
+    author_id : TYPE v
+        DESCRIPTION.
+        parse a B link
+
+    Returns
+    -------
+    None.
+
+    '''
     url = new_url
     name_sty = url.split("/").pop(-1)
     if "?" in name_sty:
@@ -222,10 +320,24 @@ async def add_group_b(new_url, cursor, branddb, channel, author_id):
 
 
 async def add_group_d(new_url, cursor, branddb, channel, author_id):
-    """
-    # parse a D link
+    '''
 
-    """
+
+    Parameters
+    ----------
+    new_url : TYPE v
+    cursor : TYPE v
+    branddb : TYPE aiodb
+    channel : TYPE v
+    author_id : TYPE v
+        DESCRIPTION.
+        parse a D link
+
+    Returns
+    -------
+    None.
+
+    '''
     url = new_url
     if "?" in url:
         name_sty = url.split("?").pop(0)
@@ -257,10 +369,24 @@ async def add_group_d(new_url, cursor, branddb, channel, author_id):
 
 
 async def add_shoe(message, channel, cursor, branddb, br_table_array):
-    """
-    # adding shoes to db
+    '''
 
-    """
+
+    Parameters
+    ----------
+    message : TYPE v
+    channel : TYPE v
+    cursor : TYPE v
+    branddb : TYPE aiodb
+    br_table_array : TYPE info
+        DESCRIPTION.
+        adding shoes to db
+
+    Returns
+    -------
+    None.
+
+    '''
     url = message.content
     url_input_list = [u.strip() for u in url.split(",")]
     # print(url_input_list)
@@ -326,10 +452,25 @@ async def add_shoe(message, channel, cursor, branddb, br_table_array):
 
 
 async def search_shoes(aiohttp, random, GIPHY_TOKEN, lowermsg, cursor, channel):
-    """
-    # search in shoes table
+    '''
 
-    """
+
+    Parameters
+    ----------
+    aiohttp : TYPE lib
+    random : TYPE lib
+    GIPHY_TOKEN : TYPE env
+    lowermsg : TYPE v
+    cursor : TYPE v
+    channel : TYPE v
+        DESCRIPTION.
+        search in shoes table
+
+    Returns
+    -------
+    None.
+
+    '''
     async with aiohttp.ClientSession() as session:
         async with session.get(
             f"https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=loading&limit=10"
@@ -337,7 +478,7 @@ async def search_shoes(aiohttp, random, GIPHY_TOKEN, lowermsg, cursor, channel):
             async with session.get(
                 f"https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=no+its+mine&limit=10"
             ) as bad_response:
-                print(response.status)
+                print(f"SEARCH: {response.status}")
                 if response.status == 200:
                     gifs_data = await response.json()
                     gifs = gifs_data["data"]
@@ -366,18 +507,45 @@ async def search_shoes(aiohttp, random, GIPHY_TOKEN, lowermsg, cursor, channel):
 
 
 def check(message, author, channel):
-    """
-    # author check
+    '''
+    Parameters
+    ----------
+    message : TYPE v
+    author : TYPE v
+    channel : TYPE v
+        DESCRIPTION.
+        check
 
-    """
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    '''
+
     return author == message.author and channel == message.channel
 
 
 async def new_thread(discord, message, channel, thread_name, thread_reason, thread_author):
-    """
-    # makes new thread using params
+    '''
 
-    """
+
+    Parameters
+    ----------
+    discord : TYPE lib
+    message : TYPE v
+    channel : TYPE v
+    thread_name : TYPE v
+    thread_reason : TYPE v
+    thread_author : TYPE v
+        DESCRIPTION.
+        # makes new thread using params
+
+    Returns
+    -------
+    None.
+
+    '''
     guild = message.guild
     text_channel = discord.utils.get(guild.channels, name='threads')
     if not text_channel:
@@ -399,6 +567,8 @@ async def new_thread(discord, message, channel, thread_name, thread_reason, thre
     SITE LIST👀  SHOE LIST👟  FIND STYLE💵  CLEAR🧹
         ADD SITE👍🏾   DEL SITE👎🏾   REFRESH🌪️
       GIMME🔍   COMMANDS🤬   HELP❓   ADD SHOE📚 ''')
+    await pin_message.add_reaction("🌪️")
+    await pin_message.add_reaction("🧹")
     await pin_message.add_reaction("👀")
     await pin_message.add_reaction("👟")
     await pin_message.add_reaction("💵")
@@ -408,45 +578,102 @@ async def new_thread(discord, message, channel, thread_name, thread_reason, thre
     await pin_message.add_reaction("📚")
     await pin_message.add_reaction("👍🏾")
     await pin_message.add_reaction("👎🏾")
-    await pin_message.add_reaction("🌪️")
-    await pin_message.add_reaction("🧹")
+
     await pin_message.pin()
 
 
-async def make_new_thread(discord, bot, asyncio, message, check, channel, author):
-    """
-    # create a new thread
-
-    """
-    await channel.send("Gimme name 30 SECONDS!")
-    next_resp = False
-    def check_(m): return check(m, author, channel)
-    try:
-        # Wait for the user's response
-        response = await bot.wait_for('message', check=check_, timeout=30)
-        thread_author = response.author
-        thread_name = response.content
-        next_resp = True
-    except asyncio.TimeoutError:
-        await channel.send("Too slow, try again!")
-    if next_resp is True:
-        await channel.send("Ok but why? 30 SECONDS!")
-        try:
-            response = await bot.wait_for('message', check=check_, timeout=30)
-            thread_reason = response.content
-        except asyncio.TimeoutError:
-            await channel.send("Too slow, try again!")
-        finally:
-            thread_reason = response.content
-            await new_thread(discord, message, channel, thread_name, thread_reason, thread_author)
+async def make_new_thread(aiomysql, discord, bot, asyncio, message, check, channel, author):
+    '''
 
 
-async def beep_channels(aiomysql, message):
-    """
-    # get channel info of guild
+    Parameters
+    ----------
+    aiomysql : TYPE lib
+    discord : TYPE lib
+    bot : TYPE client
+    asyncio : TYPE lib
+    message : TYPE v
+    check : TYPE func
+    channel : TYPE v
+    author : TYPE v
+        DESCRIPTION.
+        NEW THREAD CREATION
+    Returns
+    -------
+    None.
 
-    """
-    print("in channel")
+    '''
+    async with aiomysql.create_pool(
+        host='localhost',
+        port=3306,
+        user='root',
+        password='root',
+        db='beep_ai'
+    ) as beep_ch:
+        print("THREAD: 1")
+        async with beep_ch.acquire() as beep_chan:
+            async with beep_chan.cursor() as beep_chan_cursor:
+                await channel.send("Gimme name 30 SECONDS!")
+                next_resp = False
+                print("THREAD: 2")
+                def check_(m): return check(m, author, channel)
+                print("THREAD: 3")
+                try:
+                    print("THREAD: 4")
+                    # Wait for the user's response
+                    response = await bot.wait_for('message', check=check_, timeout=30)
+                    print(f"THREAD: {response}")
+                    thread_author = response.author
+                    thread_name = response.content
+                    print(f"THREAD: {thread_author}")
+                    print(f"THREAD: {thread_name}")
+                    is_it = f"SELECT thread_name FROM beep_channels \
+                        WHERE thread_name = '{thread_name}'"
+                    print(f"THREAD: {is_it}")
+                    await beep_chan_cursor.execute(is_it)
+                    it_is = await beep_chan_cursor.fetchone()
+                    print(f"THREAD: {it_is}")
+                    if it_is is not None:
+                        taken = await channel.send(
+                            "https://giphy.com/gifs/taken-seat-kDRacElvbMPDO")
+                        await taken.delete(delay=10)
+                        return
+                    next_resp = True
+                except asyncio.TimeoutError:
+                    await channel.send("Too slow, try again!")
+                if next_resp is True:
+                    await channel.send("Ok but why? 30 SECONDS!")
+                    try:
+                        response = await bot.wait_for('message', check=check_, timeout=30)
+                        thread_reason = response.content
+                    except asyncio.TimeoutError:
+                        await channel.send("Too slow, try again!")
+                    finally:
+                        thread_reason = response.content
+                        await new_thread(discord,
+                                         message,
+                                         channel,
+                                         thread_name,
+                                         thread_reason,
+                                         thread_author)
+
+
+async def beep_channels(discord, aiomysql, message):
+    '''
+    Parameters
+    ----------
+    aiomysql : TYPE lib
+    message : TYPE v
+        DESCRIPTION.
+        get channel info of guild
+        create a new thread
+
+    Returns
+    -------
+    None.
+
+    '''
+    print("BEEPCH in channel")
 
     # beep ai db
     async with aiomysql.create_pool(
@@ -459,17 +686,26 @@ async def beep_channels(aiomysql, message):
         async with beep_ch.acquire() as beep_chan:
             async with beep_chan.cursor() as beep_chan_cursor:
                 channel_id = message.channel.id
-                print(channel_id)
+                print(f"BEEPCH: {channel_id}")
                 channel_name = message.channel
-                print(channel_name)
+                print(f"BEEPCH: {channel_name}")
                 discord_user_id = message.author.id
-                print(discord_user_id)
-                check_channels = f"SELECT thread_id FROM beep_channels WHERE thread_id = '{channel_id}'"
+                print(f"BEEPCH: {discord_user_id}")
+                check_channels = f"SELECT thread_id FROM beep_channels WHERE thread_id = \
+                    '{channel_id}'"
                 await beep_chan_cursor.execute(check_channels)
-                result = await beep_chan_cursor.fetchone()
-                if result is None:
-                    insert_channels = f"INSERT INTO beep_channels (thread_id, thread_name, discord_user_id) VALUES ('{channel_id}','{channel_name}','{discord_user_id}')"
+                result_1 = await beep_chan_cursor.fetchone()
+                check_channels = f"SELECT thread_name FROM beep_channels WHERE thread_name = \
+                    '{channel_name}'"
+                await beep_chan_cursor.execute(check_channels)
+                result_2 = await beep_chan_cursor.fetchone()
+                if result_1 is None and result_2 is None:
+                    insert_channels = f"INSERT INTO beep_channels (thread_id, thread_name, \
+                        discord_user_id) VALUES ('{channel_id}','{channel_name}',\
+                                                 '{discord_user_id}')"
                     await beep_chan_cursor.execute(insert_channels)
                     await beep_chan.commit()
+                elif result_1 is None and result_2 is not None:
+                    discord.thread.delete()
                 else:
-                    print("Known channel")
+                    print("BEEPCH: Known channel")

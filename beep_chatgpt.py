@@ -10,10 +10,22 @@ punct = [".", "?", "!"]
 
 
 async def message_to_dict(message):
-    """
-    # convert string to dict
+    '''
 
-    """
+
+    Parameters
+    ----------
+    message : TYPE v
+        DESCRIPTION.
+        convert string to dict
+
+    Returns
+    -------
+    dict
+        DESCRIPTION.
+        dict of string
+
+    '''
     return {
         'content': message.content,
         'author': message.author.name,
@@ -22,15 +34,27 @@ async def message_to_dict(message):
 
 
 async def handle_message(aiomysql, openai, message, channel):
-    """
-    # main ai
+    '''
 
-    """
+
+    Parameters
+    ----------
+    aiomysql : TYPE lib
+    openai : TYPE lib
+    message : TYPE v
+    channel : TYPE v
+        main ai
+
+    Returns
+    -------
+    None.
+
+    '''
 
     punct_message = message.content.endswith(('.', '?', '!'))
     discord_user_id = message.author.id
     username = message.author.name
-    print(f"User Input: {punct_message}")
+    print(f"CHATUser Input: {punct_message}")
 
     # connect to ai db
     async with aiomysql.create_pool(
@@ -46,14 +70,15 @@ async def handle_message(aiomysql, openai, message, channel):
                     f"SELECT user_id FROM users WHERE discord_user_id='{discord_user_id}'")
                 result = await cursor.fetchone()
                 if result is None:
-                    insert_user_query = "INSERT INTO users (discord_user_id, username) VALUES (%s, %s)"
+                    insert_user_query = "INSERT INTO users (discord_user_id, username) \
+                        VALUES (%s, %s)"
                     await cursor.execute(insert_user_query, (discord_user_id, username))
                     await conn.commit()
-                    print("added new user")
+                    print("CHAT added new user")
                 else:
-                    print("known user")
+                    print("CHAT: known user")
                 if punct_message is True:
-                    print(f"User:{message.content}")
+                    print(f"CHAT: User:{message.content}")
                     response = openai.Completion.create(
                         engine="text-davinci-003",
                         prompt=message.content,
@@ -66,16 +91,15 @@ async def handle_message(aiomysql, openai, message, channel):
                         temperature=0
                     )
                     generated_text = response["choices"][0]["text"]
-
-                    # Send generated text back to Discord
-                    print(f"Beep:{generated_text}")
-                    print(message.channel)
-                    print(message.channel.id)
-                    print(message.author.id)
-                    print(message.author)
+                    print(f"CHAT: Beep:{generated_text}")
+                    print(f"CHAT: {message.channel}")
+                    print(f"CHAT: {message.channel.id}")
+                    print(f"CHAT: {message.author.id}")
+                    print(f"CHAT: {message.author}")
                     await channel.send(generated_text)
                     # await channel.send("gr^^^")
-                    insert_interaction_query = "INSERT INTO interactions (discord_user_id, context, bot_response, thread_id, thread_name) VALUES (%s, %s, %s, %s, %s)"
+                    insert_interaction_query = "INSERT INTO interactions (discord_user_id, \
+                        context, bot_response, thread_id, thread_name) VALUES (%s, %s, %s, %s, %s)"
                     await cursor.execute(
                         insert_interaction_query, (
                             discord_user_id, message.content, generated_text, channel.id, channel))
