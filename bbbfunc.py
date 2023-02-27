@@ -451,7 +451,7 @@ async def add_shoe(message, channel, cursor, branddb, br_table_array):
                 break
 
 
-async def search_shoes(aiohttp, random, GIPHY_TOKEN, lowermsg, cursor, channel):
+async def search_shoes(discord, aiohttp, random, GIPHY_TOKEN, lowermsg, cursor, channel):
     '''
 
 
@@ -484,26 +484,73 @@ async def search_shoes(aiohttp, random, GIPHY_TOKEN, lowermsg, cursor, channel):
                     gifs = gifs_data["data"]
                     if gifs:
                         gif = random.choice(gifs)["url"]
-                    await channel.send(gif)
+                    send_gif = await channel.send(gif)
+                    await send_gif.delete(delay=2)
             to_find = lowermsg[6:]
             found_shoes = (
                 f"SELECT * FROM shoes WHERE name LIKE '%{to_find}%' OR url LIKE '%{to_find}%'")
             await cursor.execute(found_shoes)
             all_found = await cursor.fetchall()
-            all_found_list = [a for b in all_found for a in b]
-            # map formats and handles correctly
-            clean = '\n'.join(map(str, all_found_list))
-            if len(clean) >= 2000:
-                if bad_response.status == 200:
-                    gifs_data = await response.json()
-                    gifs = gifs_data["data"]
-                    if gifs:
-                        gif = random.choice(gifs)["url"]
-                    send_bad = await channel.send(gif)
-                await send_bad.delete(delay=10)
-                await channel.send("Be more specific")
+            if all_found:
+                page = 1
+                while len(all_found) > 0:
+                    embed = discord.Embed(
+                        title='Search Results', description=f'Search query: {to_find}', color=discord.Color.blue())
+                    for result in all_found[:20]:
+                        name = result[1]
+                        style_code = result[2]
+                        color = result[3]
+                        og_price = result[4]
+                        cur_price = result[5]
+                        url = result[6]
+                        embed.add_field(
+                            name=name, value=f'Style Code: {style_code}\nColor: {color}\nOld Price: \
+    {og_price}\nCurrent Price: {cur_price}\nURL: <{url}>', inline=False)
+                    send_embed = await channel.send(embed=embed)
+                    await send_embed.delete(delay=600)
+                    all_found = all_found[20:]
+                    page += 1
+
+                    if len(all_found) > 0:
+                        if bad_response.status == 200:
+                            gifs_data = await response.json()
+                            gifs = gifs_data["data"]
+                            if gifs:
+                                gif = random.choice(gifs)["url"]
+                            send_bad = await channel.send(gif)
+                        await send_bad.delete(delay=10)
+                        await channel.send(f"Page {page} of search results. Be more specific for refined results.")
             else:
-                await channel.send(clean)
+                await channel.send("No results found.")
+#             if all_found:
+#                 embed = discord.Embed(
+#                     title='Search Results', description=f'Search query: \
+#    {to_find}', color=discord.Color.blue())
+#                 for result in all_found:
+#                     # item_id = result[0]
+#                     name = result[1]
+#                     style_code = result[2]
+#                     color = result[3]
+#                     og_price = result[4]
+#                     cur_price = result[5]
+#                     url = result[6]
+#                     print(url)
+#                     embed.add_field(
+#                         name=name, value=f'Style Code: {style_code}\nColor: {color}\nOld Price: \
+# {og_price}\nCurrent Price: {cur_price}\nURL: <{url}>', inline=False)
+#                 await channel.send(embed=embed)
+#             if len(embed) >= 2000:
+#                 if bad_response.status == 200:
+#                     gifs_data = await response.json()
+#                     gifs = gifs_data["data"]
+#                     if gifs:
+#                         gif = random.choice(gifs)["url"]
+#                     send_bad = await channel.send(gif)
+#                 await send_bad.delete(delay=10)
+#                 await channel.send("Be more specific")
+#             else:
+#                 return
+#                 # await channel.send(clean)
 
 
 def check(message, author, channel):
@@ -563,12 +610,10 @@ async def new_thread(discord, message, channel, thread_name, thread_reason, thre
     await text_channel.send(
         f'"{message.author}" created in {text_channel.mention}!\n{thread.mention}',
         mention_author=True)
-    pin_message = await fresh_thread.send('''
-    SITE LIST👀  SHOE LIST👟  FIND STYLE💵  CLEAR🧹
-        ADD SITE👍🏾   DEL SITE👎🏾   REFRESH🌪️
-      GIMME🔍   COMMANDS🤬   HELP❓   ADD SHOE📚 ''')
-    await pin_message.add_reaction("🌪️")
-    await pin_message.add_reaction("🧹")
+    pin_message = await fresh_thread.send('''***
+SITE LIST👀  SHOE LIST👟  FIND STYLE💵  CLEAR🧹
+ADD SITE👍🏾   DEL SITE👎🏾   REFRESH🌪️   SCOOP📥
+GIMME🔍   COMMANDS🤬   HELP❓   ADD SHOE📚 ''')
     await pin_message.add_reaction("👀")
     await pin_message.add_reaction("👟")
     await pin_message.add_reaction("💵")
@@ -576,9 +621,11 @@ async def new_thread(discord, message, channel, thread_name, thread_reason, thre
     await pin_message.add_reaction("🤬")
     await pin_message.add_reaction("❓")
     await pin_message.add_reaction("📚")
+    await pin_message.add_reaction("📥")
     await pin_message.add_reaction("👍🏾")
     await pin_message.add_reaction("👎🏾")
-
+    await pin_message.add_reaction("🌪️")
+    await pin_message.add_reaction("🧹")
     await pin_message.pin()
 
 
@@ -709,3 +756,92 @@ async def beep_channels(discord, aiomysql, message):
                     discord.thread.delete()
                 else:
                     print("BEEPCH: Known channel")
+
+
+async def update_url_imgs(aiohttp, BeautifulSoup, headers, branddb, channel, cursor, message):
+    grab_scodes = "SELECT style_code FROM shoes"
+    await cursor.execute(grab_scodes)
+    all_scodes = await cursor.fetchall()
+    print(f"UPURL: {all_scodes}")
+    all_scodes_list = [a for b in all_scodes for a in b]
+    print(f"UPURL: {all_scodes_list}")
+    for style_code in all_scodes_list:
+        # https: // www.google.com/imghp?hl = en & authuser = 0 & ogbl
+        query = "https://www.google.com/search?q={style_code}"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(query, headers=headers) as response:
+                print(f"UPURL: {response.status}")
+                if response.status == 200:
+                    text_content = await response.text()
+                    soup = BeautifulSoup(
+                        text_content,
+                        "html.parser")
+                    # print(f"UPURL: {soup}")
+                    found_image = soup.find("x22data:image").get_text()
+                    print(f"UPURL: {found_image}")
+                    add_img_url = f"UPDATE shoes SET image_url = '{found_image}' WHERE style_code \
+= '{style_code}'"
+                    await cursor.execute(add_img_url)
+    await branddb.commit()
+
+
+async def tup_to_list(argx):
+    tup = argx
+    arg_list = [a for b in tup for a in b]
+    return arg_list
+
+
+async def tup_to_str(argx):
+    tup = argx
+    arg_list = [a for b in tup for a in b]
+    arg_str = ''.join(arg_list)
+    return arg_str
+
+
+async def tup_to_str_list(argx):
+    tup = argx
+    arg_list = [a for b in tup for a in b]
+    arg_str = '\n'.join(arg_list)
+    return arg_str
+
+
+async def msg_gif(aiohttp, GIPHY_TOKEN, channel, random, string):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            f'https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q={string}&limit=10'
+        ) as response:
+            if response.status == 200:
+                gifs_list = await response.json()
+                gifs = gifs_list["data"]
+                if gifs:
+                    gif = random.choice(gifs)[
+                        "url"]
+                    gif_send = await channel.send(gif)
+                    return await gif_send.delete(delay=10)
+
+
+async def is_pin(message):
+    print(f"ISPIN: {message}")
+    if message.pinned == True:
+        print("ISPIN: TRUE")
+        return False
+    else:
+        print("ISPIN: FALSE")
+        return True
+
+
+async def get_em(aiohttp, asyncio, BeautifulSoup, bot, channel, add_shoe_channel, url):
+    shoe_channel = bot.get_channel(add_shoe_channel)
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            html = await resp.text()
+            soup = BeautifulSoup(html, 'html.parser')
+            links = []
+            for link in soup.find_all('a'):
+                href = link.get('href')
+                if href and href.startswith('http') and ".com/t/" in href:
+                    links.append(href)
+                    site_send = await shoe_channel.send(href)
+                    await site_send.delete(delay=5)
+                    await asyncio.sleep(1)
+            await channel.send(f"{url} Done")

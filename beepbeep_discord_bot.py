@@ -33,6 +33,7 @@ import nest_asyncio
 import aiohttp
 import aiofiles
 import aiomysql
+import json
 import discord
 import requests
 import openai
@@ -45,12 +46,18 @@ from bbbfunc import (
     fresh_while_on,
     check_while_on,
     add_shoe,
-    search_shoes,
     check,
+    search_shoes,
     make_new_thread,
-    beep_channels)
+    beep_channels,
+    update_url_imgs,
+    # tup_to_str,
+    tup_to_str_list,
+    msg_gif,
+    tup_to_list,
+    get_em)
 from beep_chatgpt import handle_message
-from beep_price import find_style_code
+from beep_price import find_style_code, update_nike
 
 # load env variables
 load_dotenv()
@@ -74,15 +81,16 @@ ip_token = os.getenv("IP_INFO_TOKEN")
 home_channel = int(os.getenv("HOME"))
 add_shoe_channel = int(os.getenv("ADD_SHOE"))
 
+
 # headers
-with open("user_agents.txt", "r", encoding="utf-8") as ua:
+with open("user_agents.txt", "r") as ua:
     user_agents_list = ua.read().split('\n')
     headers_rotate = {'User-Agent': random.choice(user_agents_list)}
     print(headers_rotate)
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,\
-        like Gecko) Chrome/109.0.0.0 Safari/537.36'}
+like Gecko) Chrome/109.0.0.0 Safari/537.36'}
 print(headers)
 
 # proxy info
@@ -98,8 +106,6 @@ now_time = time.time()
 startup_proxies(requests, time, random, now_time,
                 modified_file_time, current_new_proxies, ip_token)
 
-# startup event  send gif and message, deletes itself after 10 seconds
-
 
 @bot.event
 async def on_ready():
@@ -114,23 +120,16 @@ async def on_ready():
     '''
     print(f'{bot.user} has connected to Discord!')
     channel = discord.utils.get(bot.guilds[0].channels, name="home")
-    async with aiohttp.ClientSession() as session:
-        async with session.get(
-            f'https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=smooth+entrance&limit=10'
-        ) as response:
-            if response.status == 200:
-                gifs_list = await response.json()
-                gifs = gifs_list["data"]
-                if gifs:
-                    gif = random.choice(gifs)["url"]
-                    send_gif = await channel.send(gif)
+    string = "smooth+entrance"
+    await msg_gif(aiohttp, GIPHY_TOKEN, channel, random, string)
+
     send_mess = await channel.send('''...
 Type commands for list of commands
 
 You can ask me questions about stuff and things
     but you must have punctuation! ( . ? !)
     ''')
-    await send_gif.delete(delay=10)
+
     await send_mess.delete(delay=10)
 
 
@@ -153,17 +152,12 @@ async def on_member_join(member):
 
     if member.id == bot.user.id:
         return
+
+    member.add_roles()
+
     channel = bot.get_channel(home_channel)
-    async with aiohttp.ClientSession() as session:
-        async with session.get(
-            f'https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=Welcome&limit=10'
-        ) as response:
-            if response.status == 200:
-                gifs_list = await response.json()
-                gifs = gifs_list["data"]
-                if gifs:
-                    gif = random.choice(gifs)["url"]
-                    await channel.send(gif)
+    string = "welcome"
+    await msg_gif(aiohttp, GIPHY_TOKEN, channel, random, string)
     channel = discord.utils.get(bot.guilds[0].channels, name="home")
     response = f"Welcome Welcome Welcome, {member.name}."
     await channel.send(response)
@@ -210,8 +204,7 @@ async def on_raw_reaction_add(payload):
             async with branddb.cursor() as cursor:
                 await cursor.execute("SELECT site_url FROM shoe_sites")
                 br_table = await cursor.fetchall()
-                br_table_array = [a for b in br_table for a in b]
-                br_list = '\n'.join(br_table_array)
+                br_list = await tup_to_str_list(br_table)
                 now_datetime = datetime.datetime.now(timezone.utc)
                 now_datetime_s = now_datetime.timestamp()
                 mess_create = message.created_at
@@ -223,6 +216,10 @@ async def on_raw_reaction_add(payload):
                 if time_diff <= 12:
                     print("RAW EMO: less")
                     return
+                print("RAW EMO: WELCOMEWALL")
+                if click_emoji == discord.PartialEmoji(name='🍥'):
+                    member_role = discord.utils.get(bot.guilds[0].roles, name="User")
+                    await member.add_roles(member_role)
                 print("RAW EMO: 3")
                 if click_emoji == discord.PartialEmoji(name='👀'):
                     send_list = await channel.send(br_list)
@@ -233,10 +230,30 @@ async def on_raw_reaction_add(payload):
                     s_h = ("SELECT name FROM shoes")
                     await cursor.execute(s_h)
                     shoe_table = await cursor.fetchall()
-                    shoe_table_array = [a for b in shoe_table for a in b]
-                    shoe_list = '\n'.join(shoe_table_array)
-                    send_shoe = await channel.send(shoe_list)
-                    await send_shoe.delete(delay=30)
+                    print(shoe_table)
+                    shoe_list = await tup_to_list(shoe_table)
+                    print(shoe_list)
+                    # embed = discord.Embed(title="Shoe List", description='\n'.join(shoe_list))
+                    max_items_per_embed = 100
+                    total_embeds = (len(shoe_list) // max_items_per_embed) + 1
+                    print(total_embeds)
+                    for i in range(total_embeds):
+                        embed = discord.Embed(title="List", description="")
+                        start_index = i * max_items_per_embed
+                        end_index = min(start_index + max_items_per_embed, len(shoe_list))
+                        for item in shoe_list[start_index:end_index]:
+                            embed.description += f"- {item}\n"
+                        if i == 0:
+                            print("1")
+                            message = await channel.send(embed=embed)
+                            await message.delete(delay=30)
+                        else:
+                            print("2")
+                            embed_more = await channel.send(embed=embed)
+                            await embed_more.delete(delay=30)
+                    # print("3")
+                    # send_shoe = await channel.send(embed=embed)
+                    # await send_shoe.delete(delay=30)
                     return
                 print("RAW EMO: 5")
                 if click_emoji == discord.PartialEmoji(name='💵'):
@@ -245,7 +262,7 @@ async def on_raw_reaction_add(payload):
         Check for current prices in db by
          sending "find style" followed by
          the style code.One code at a time
-    
+
         e.) find style CHJKS-9878''')
                     await style_send.delete(delay=30)
                 print("RAW EMO: 6")
@@ -256,7 +273,7 @@ async def on_raw_reaction_add(payload):
     ***ADD SHOE TO DB
         Click the link below
         then send the link of the item.
-        As long as the site is in site 
+        As long as the site is in site
         list you str8!''')
                     await add_send.delete(delay=10)
 
@@ -265,9 +282,9 @@ async def on_raw_reaction_add(payload):
                     gimme_send = await channel.send('''*
     ***SEARCH DB
         Search for shoes in database by
-        sending "gimme" followed by 
+        sending "gimme" followed by
         search words
-        
+
             type gimme KEYWORD''')
                     await gimme_send.delete(delay=10)
 
@@ -302,18 +319,8 @@ async def on_raw_reaction_add(payload):
 
                 print("RAW EMO: 10")
                 if click_emoji == discord.PartialEmoji(name='🌪️'):
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(
-                            f'https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=ill+be+back&limit=10'
-                        ) as response:
-                            if response.status == 200:
-                                gifs_list = await response.json()
-                                gifs = gifs_list["data"]
-                                if gifs:
-                                    gif = random.choice(gifs)[
-                                        "url"]
-                                    gif_send = await channel.send(gif)
-                                    await gif_send.delete(delay=60)
+                    string = "I'll+be+back"
+                    await msg_gif(aiohttp, GIPHY_TOKEN, channel, random, string)
                     to_home = discord.utils.get(
                         bot.guilds[0].channels, name="home")
                     send_home = await to_home.send(f"{member} refreshing proxies")
@@ -324,11 +331,17 @@ async def on_raw_reaction_add(payload):
                                          asyncio,
                                          ip_token,
                                          channel)
-                    await gimme_send.delete(delay=10)
 
                 print("RAW EMO: 12")
                 if click_emoji == discord.PartialEmoji(name='🧹'):  # PURGE THREAD
                     await channel.purge(after=mess_create)
+
+                print("RAW : ")
+                if click_emoji == discord.PartialEmoji(name='📥'):
+                    with open("scoop_list.txt", "r", encoding="utf-8") as s_l:
+                        for url in s_l:
+                            await get_em(aiohttp, asyncio, BeautifulSoup, bot, channel, add_shoe_channel, url)
+                            asyncio.sleep(1)
 
                 print("RAW EMO: 13")
                 if click_emoji == discord.PartialEmoji(name='🤬'):
@@ -353,60 +366,60 @@ async def on_raw_reaction_add(payload):
     ***ADD SHOE TO DB
         Send link to add shoe! As long as
          the site is in site list you str8!
-    
-    
+
+
     ***CHECK SITE LIST
         Check the site list by sending
          "site list". No site in list?
-    
-    
+
+
     ***AD SITE TO DB
         Send "add" then the site followed
          by the appropriate format letter.
-    
+
         a, b, c, or d. "www.store.com a"
-    
+
         *Don't worry about
         the rest(?=>) part of the url*
-    
-    
+
+
         Format A
         .com/blah/n-a-m-e/scORsku
-    
+
         Format B
         .com/blah/n-a-m-e-sc-sc
-    
+
         Format C
         dont work
-    
+
         Format D
         .com/blah/n-a-m-e-sc
-    
-    
+
+
     ***ADDING MULTIPLE ITEMS
         Multi-link input needs to be seperated
         by a comma with no spaces
-    
+
         https://www.n.com/no/win,www.f.com/af/shoe-09,www.g.com/e,
-    
+
     ***CHECK SHOE LIST
         Check all shoes list in the db by
          sending "shoe list"|
-    
-    
+
+
     ***CHECK CURRENT PRICE
         Check for current prices in db by
          sending "find style" followed by
          the style code.One code at a time
-    
+
         find style CHJKS-9878
-    
-    
+
+
     ***REFRESH PROXIES
         Refresh the proxies by sending
         "freshen up beep"
-    
-    
+
+
     ***SEARCH DB
         Search for shoes in database by
         sending "gimme" followed by search
@@ -433,10 +446,6 @@ async def on_message(message):
 
     '''
 
-    # prevent bot replying to bot
-    if message.author == bot.user:
-        return
-
     # get channel info of guild
     await beep_channels(discord, aiomysql, message)
 
@@ -452,18 +461,31 @@ async def on_message(message):
             async with branddb.cursor() as cursor:
                 await cursor.execute("SELECT site_url FROM shoe_sites")
                 br_table = await cursor.fetchall()
-                br_table_array = [a for b in br_table for a in b]
-                br_list = '\n'.join(br_table_array)
+                br_table_array = await tup_to_list(br_table)
+                br_list = await tup_to_str_list(br_table)
                 channel = message.channel
                 lowermsg = message.content.lower()
                 where_msg = message.channel.id
 
-                purge = 'beep clean'
+                clear = 'beep clean'
+                if lowermsg.startswith(clear):
+                    async for message in channel.history():
+                        if not message.pinned:
+                            await message.delete()
+                            await asyncio.sleep(0.75)
+
+                purge = "beep destroy"
                 if lowermsg.startswith(purge):
-                    await channel.purge()
+                    await message.channel.purge()
+                    await message.channel.send("You asked for it")
 
                 # only messages sent in home
                 if where_msg == home_channel:
+
+                    # prevent bot replying to bot
+                    if message.author == bot.user:
+                        return
+
                     home_good = ("site list", "shoe list",
                                  "find style", "gimme", "help")
                     if any(message.content.startswith(good) for good in home_good):
@@ -488,17 +510,8 @@ async def on_message(message):
                                            branddb)
                         # refresh proxies
                         if "freshen up beep" == message.content.lower():
-                            async with aiohttp.ClientSession() as session:
-                                async with session.get(
-                                    f'https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=ill+be+back&limit=10'
-                                ) as response:
-                                    if response.status == 200:
-                                        gifs_list = await response.json()
-                                        gifs = gifs_list["data"]
-                                        if gifs:
-                                            gif = random.choice(gifs)[
-                                                "url"]
-                                            await channel.send(gif)
+                            string = "I'll+be+back"
+                            await msg_gif(aiohttp, GIPHY_TOKEN, channel, random, string)
                             await fresh_while_on(aiofiles, current_new_proxies)
                             await check_while_on(aiofiles,
                                                  aiohttp,
@@ -509,10 +522,64 @@ async def on_message(message):
                         # create a new thread
                         if "new thread" == lowermsg:
                             author = message.author
-                            await make_new_thread(aiomysql, discord, bot, asyncio, message, check, channel, author)
+                            await make_new_thread(aiomysql,
+                                                  discord,
+                                                  bot,
+                                                  asyncio,
+                                                  message,
+                                                  check,
+                                                  channel,
+                                                  author)
+
+                        if "beep look" == lowermsg:
+                            await update_url_imgs(aiohttp,
+                                                  BeautifulSoup,
+                                                  headers,
+                                                  branddb,
+                                                  channel,
+                                                  cursor,
+                                                  message)
+
+                        gettem = "gettem"
+                        if lowermsg.startswith(gettem):
+                            if "www.nike.com" in lowermsg:
+                                url = message.content.split()
+                                url = url[1]
+                                print(url)
+                                shoe_channel = bot.get_channel(add_shoe_channel)
+                                async with aiohttp.ClientSession() as session:
+                                    async with session.get(url) as resp:
+                                        html = await resp.text()
+                                        soup = BeautifulSoup(html, 'html.parser')
+                                        links = []
+                                        for link in soup.find_all('a'):
+                                            href = link.get('href')
+                                            if href and href.startswith('http') and ".com/t/" in href:
+                                                links.append(href)
+                                                await shoe_channel.send(href)
+                                                await asyncio.sleep(1)
+                                        await channel.send("Done")
+
+                        all_nike = "update nike"
+                        if lowermsg == all_nike:
+                            all_nike_urls = "SELECT url FROM shoes"
+                            await cursor.execute(all_nike_urls)
+                            nike_fetch = await cursor.fetchall()
+                            all_nike_links_list = await tup_to_list(nike_fetch)
+                            nike_urls = []
+                            for url in all_nike_links_list:
+                                if "www.nike.com" in url:
+                                    nike_urls.append(url)
+                            print(nike_urls)
+                            await update_nike(aiohttp, asyncio, BeautifulSoup, json, random, branddb, cursor, channel, nike_urls)
 
                 # only messages sent in threads
                 if isinstance(channel, discord.Thread):
+
+                    # prevent bot replying to bot
+                    if message.author == bot.user:
+                        return
+
                     greets = ['hey beep', 'yo beep', 'ay beep',
                               'le beep', 'sir beep', 'hey boop',
                               'yo boop', 'ay boop', 'le boop', 'sir boop']
@@ -521,30 +588,14 @@ async def on_message(message):
                     # message responses
                     for greet in greets:
                         if greet.lower() in lowermsg:
-                            async with aiohttp.ClientSession() as session:
-                                async with session.get(
-                                    f'https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=yuh+sup&limit=10'
-                                ) as response:
-                                    if response.status == 200:
-                                        gifs_list = await response.json()
-                                        gifs = gifs_list["data"]
-                                        if gifs:
-                                            gif = random.choice(gifs)["url"]
-                                            await channel.send(gif)
+                            string = "yuh+sup"
+                            await msg_gif(aiohttp, GIPHY_TOKEN, channel, random, string)
                             await channel.send(f'Yuh sup @{message.author}')
 
                     for nani in nanis:
                         if nani.lower() in lowermsg or lowermsg[0] == "?":
-                            async with aiohttp.ClientSession() as session:
-                                async with session.get(
-                                    f'https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=nani&limit=10'
-                                ) as response:
-                                    if response.status == 200:
-                                        gifs_list = await response.json()
-                                        gifs = gifs_list["data"]
-                                        if gifs:
-                                            gif = random.choice(gifs)["url"]
-                                            await channel.send(gif)
+                            string = "nani"
+                            await msg_gif(aiohttp, GIPHY_TOKEN, channel, random, string)
                             await channel.send("Nani?!")
 
                     # get site list
@@ -560,8 +611,7 @@ async def on_message(message):
                         s_h = ("SELECT name FROM shoes")
                         await cursor.execute(s_h)
                         shoe_table = await cursor.fetchall()
-                        shoe_table_array = [a for b in shoe_table for a in b]
-                        shoe_list = '\n'.join(shoe_table_array)
+                        shoe_list = await tup_to_str_list(shoe_table)
                         await channel.send(shoe_list)
                         return
 
@@ -569,6 +619,7 @@ async def on_message(message):
                     find_by_style_code = "find style"
                     if lowermsg.startswith(find_by_style_code):
                         await find_style_code(aiohttp,
+                                              discord,
                                               BeautifulSoup,
                                               asyncio,
                                               random,
@@ -579,9 +630,10 @@ async def on_message(message):
                                               cursor,
                                               branddb)
                     # search shoe db
-                    search = "gimme"
-                    if lowermsg.startswith(search):
-                        await search_shoes(aiohttp,
+                    give = "gimme"
+                    if lowermsg.startswith(give):
+                        await search_shoes(discord,
+                                           aiohttp,
                                            random,
                                            GIPHY_TOKEN,
                                            lowermsg,
@@ -675,17 +727,16 @@ async def on_message(message):
                 if message.channel.id == add_shoe_channel:
                     print("ADDSHOE: shoe1")
                     a_s_good = ("http", "www", "https", "got")
-                    if where_msg == add_shoe_channel:
-                        print("ADDSHOE: 2")
-                        if not any(message.content.startswith(good) for good in a_s_good):
-                            await message.delete()
-                        else:
-                            # adding shoes to db
-                            await add_shoe(message,
-                                           channel,
-                                           cursor,
-                                           branddb,
-                                           br_table_array)
+                    print("ADDSHOE: 2")
+                    if not any(message.content.startswith(good) for good in a_s_good):
+                        await message.delete()
+                    else:
+                        # adding shoes to db
+                        await add_shoe(message,
+                                       channel,
+                                       cursor,
+                                       branddb,
+                                       br_table_array)
 
 
 @bot.event
@@ -707,6 +758,10 @@ async def on_raw_thread_delete(payload):
     date_time = datetime.datetime.now(timezone.utc)
     thread_name = payload.thread.name
     print(f"THRDEL: {thread_name} deleted")
+    get_role = discord.utils.get(bot.guilds[0].roles, name=thread_name)
+    print(f"THRDEL: {get_role}")
+    await get_role.delete()
+    print("THRDEL: deleted")
     async with aiomysql.create_pool(
         host='localhost',
         port=3306,
@@ -727,5 +782,6 @@ async def on_raw_thread_delete(payload):
                 print(f"THRDEL: {arch_channel}")
                 await beep_chan_cursor.execute(arch_channel)
                 await beep_chan.commit()
+
 
 bot.run(TOKEN)
