@@ -17,7 +17,7 @@ async def find_style_code(aiohttp,
                           branddb):
 
     """
-    # price checking
+  # price checking
 
     """
     # if message.channel.id == home_channel:

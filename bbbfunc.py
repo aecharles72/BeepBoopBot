@@ -22,7 +22,7 @@ def startup_proxies(
         startup proxy list setup
 
     Returns
-    -------
+    ----
     None.
 
     '''

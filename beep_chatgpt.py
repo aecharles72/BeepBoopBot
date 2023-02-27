@@ -14,7 +14,7 @@ async def message_to_dict(message):
 
 
     Parameters
-    ----------
+    ------
     message : TYPE v
         DESCRIPTION.
         convert string to dict
