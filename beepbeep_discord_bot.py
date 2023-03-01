@@ -55,7 +55,10 @@ from bbbfunc import (
     tup_to_str_list,
     msg_gif,
     tup_to_list,
-    get_em)
+    tup_to_dict,
+    get_em,
+    cancel_task,
+    shoe_list)
 from beep_chatgpt import handle_message
 from beep_price import find_style_code, update_nike
 
@@ -64,6 +67,7 @@ load_dotenv()
 
 # get nest async goin
 nest_asyncio.apply()
+lock = asyncio.Lock()
 
 intents = discord.Intents.all()
 # intents.members = True
@@ -210,6 +214,7 @@ async def on_raw_reaction_add(payload):
                 mess_create = message.created_at
                 mess_create_s = mess_create.timestamp()
                 time_diff = (now_datetime_s - mess_create_s)
+
                 print(f"RAW EMO: {message.created_at}")
                 print(f"RAW EMO: {now_datetime}")
                 print(f"RAW EMO: {time_diff}")
@@ -227,34 +232,9 @@ async def on_raw_reaction_add(payload):
                     return
                 print("RAW EMO: 4")
                 if click_emoji == discord.PartialEmoji(name='👟'):
-                    s_h = ("SELECT name FROM shoes")
-                    await cursor.execute(s_h)
-                    shoe_table = await cursor.fetchall()
-                    print(shoe_table)
-                    shoe_list = await tup_to_list(shoe_table)
-                    print(shoe_list)
-                    # embed = discord.Embed(title="Shoe List", description='\n'.join(shoe_list))
-                    max_items_per_embed = 100
-                    total_embeds = (len(shoe_list) // max_items_per_embed) + 1
-                    print(total_embeds)
-                    for i in range(total_embeds):
-                        embed = discord.Embed(title="List", description="")
-                        start_index = i * max_items_per_embed
-                        end_index = min(start_index + max_items_per_embed, len(shoe_list))
-                        for item in shoe_list[start_index:end_index]:
-                            embed.description += f"- {item}\n"
-                        if i == 0:
-                            print("1")
-                            message = await channel.send(embed=embed)
-                            await message.delete(delay=30)
-                        else:
-                            print("2")
-                            embed_more = await channel.send(embed=embed)
-                            await embed_more.delete(delay=30)
-                    # print("3")
-                    # send_shoe = await channel.send(embed=embed)
-                    # await send_shoe.delete(delay=30)
-                    return
+                    task_shoe_list = asyncio.create_task(
+                        shoe_list(discord, channel, cursor, branddb, member))
+                    await task_shoe_list
                 print("RAW EMO: 5")
                 if click_emoji == discord.PartialEmoji(name='💵'):
                     style_send = await channel.send('''*
@@ -269,13 +249,14 @@ async def on_raw_reaction_add(payload):
                 if click_emoji == discord.PartialEmoji(name='📚'):
                     add_send = await channel.send(
                         '<https://discord.com/channels/1069760567692230676/1076734799823257624>')
-                    await channel.send('''*
+                    word_send = await channel.send('''*
     ***ADD SHOE TO DB
         Click the link below
         then send the link of the item.
         As long as the site is in site
         list you str8!''')
-                    await add_send.delete(delay=10)
+                    await word_send.delete(delay=15)
+                    await add_send.delete(delay=15)
 
                 print("RAW EMO: 7")
                 if click_emoji == discord.PartialEmoji(name='🔍'):
@@ -294,20 +275,21 @@ async def on_raw_reaction_add(payload):
     ***ADD SITE TO DB
         Send "add" then the site followed
          by the appropriate format letter.
+         a, b, c, or d. 
 
-        a, b, c, or d. "www.store.com a"
+         "www.w.com A"
 
         Format A
-        .com/blah/n-a-m-e/scORsku
+        https://www.w.com/blah/n-a-m-e/stylecode
 
         Format B
-        .com/blah/n-a-m-e-sc-sc
+        https://www.w..com/blah/n-a-m-e-sc-sc
 
         Format C
         dont work
 
         Format D
-        .com/blah/n-a-m-e-sc''')
+        https://www.w..com/blah/n-a-m-e-sc''')
                     await add_site_send.delete(delay=20)
 
                 print("RAW EMO: 9")
@@ -328,9 +310,10 @@ async def on_raw_reaction_add(payload):
                     await fresh_while_on(aiofiles, current_new_proxies)
                     await check_while_on(aiofiles,
                                          aiohttp,
-                                         asyncio,
                                          ip_token,
-                                         channel)
+                                         channel,
+                                         now_time,
+                                         modified_file_time)
 
                 print("RAW EMO: 12")
                 if click_emoji == discord.PartialEmoji(name='🧹'):  # PURGE THREAD
@@ -340,8 +323,13 @@ async def on_raw_reaction_add(payload):
                 if click_emoji == discord.PartialEmoji(name='📥'):
                     with open("scoop_list.txt", "r", encoding="utf-8") as s_l:
                         for url in s_l:
-                            await get_em(aiohttp, asyncio, BeautifulSoup, bot, channel, add_shoe_channel, url)
-                            asyncio.sleep(1)
+                            task_query = f"INSERT INTO tasks_ran (task_name, discord_user_id) VALUES ('task_get_em','{member.id}')"
+                            await cursor.execute(task_query)
+                            await branddb.commit()
+                            task_get_em = asyncio.create_task(
+                                get_em(aiohttp, BeautifulSoup, bot, channel, add_shoe_channel, cursor, url))
+                            await task_get_em
+                            await asyncio.sleep(1)
 
                 print("RAW EMO: 13")
                 if click_emoji == discord.PartialEmoji(name='🤬'):
@@ -426,6 +414,32 @@ async def on_raw_reaction_add(payload):
         words''')
                     await help_send.delete(delay=30)
 
+                print()
+
+                if click_emoji == discord.PartialEmoji(name="❌"):
+                    task_query = f"SELECT task_name, timestamp FROM tasks_ran WHERE discord_user_id = '{member.id}'"
+                    await cursor.execute(task_query)
+                    all_tasks = await cursor.fetchall()
+                    print(f"FQ: {all_tasks}")
+                    for tup in all_tasks:
+                        print(f"FQ: {tup}")
+                        all_tasks_list = {}
+                        task_dict = {'task_name': tup[0], 'timestamp': tup[1]}
+                        print(f"FQ: {task_dict}")
+                        all_tasks_list.append(task_dict)
+
+                        print(f"FQ: {all_tasks_list}")
+                        for item in all_tasks_list:
+                            for key, value in item.items():
+                                print(f"FQ: {value}")
+                                if isinstance(value, datetime.datetime):
+                                    task_time = value.time()
+                                    print(f"FQ: {task_time}")
+                                    if task_time - now_time < 30:
+                                        current_task = key
+                                        print(current_task)
+                                        await current_task.cancel(msg=f"Cancelled {current_task}")
+
 # when a message is sent in the discord channel
 
 
@@ -466,70 +480,24 @@ async def on_message(message):
                 channel = message.channel
                 lowermsg = message.content.lower()
                 where_msg = message.channel.id
+                member = message.author
+                print(member.roles)
 
-                clear = 'beep clean'
-                if lowermsg.startswith(clear):
-                    async for message in channel.history():
-                        if not message.pinned:
-                            await message.delete()
-                            await asyncio.sleep(0.75)
+                for role in member.roles:
+                    if "Admin" in role.name:
+                        print(role.name)
+                        print(role)
+                        clear = "beep clean"
+                        if lowermsg == clear:
+                            async for message in channel.history():
+                                if not message.pinned:
+                                    await message.delete()
+                                    await asyncio.sleep(0.75)
 
-                purge = "beep destroy"
-                if lowermsg.startswith(purge):
-                    await message.channel.purge()
-                    await message.channel.send("You asked for it")
-
-                # only messages sent in home
-                if where_msg == home_channel:
-
-                    # prevent bot replying to bot
-                    if message.author == bot.user:
-                        return
-
-                    home_good = ("site list", "shoe list",
-                                 "find style", "gimme", "help")
-                    if any(message.content.startswith(good) for good in home_good):
-                        await message.delete()
-                        await channel.send("Dirty work in your thread please")
-                    else:
-                        # add new site
-                        addstr = "add"
-                        if lowermsg.startswith(addstr):
-                            await add_site(br_table_array,
-                                           message,
-                                           channel,
-                                           cursor,
-                                           branddb,
-                                           br_list)
-                        # delete site
-                        delete = "delete"
-                        if lowermsg.startswith(delete):
-                            await del_site(message,
-                                           channel,
-                                           cursor,
-                                           branddb)
-                        # refresh proxies
-                        if "freshen up beep" == message.content.lower():
-                            string = "I'll+be+back"
-                            await msg_gif(aiohttp, GIPHY_TOKEN, channel, random, string)
-                            await fresh_while_on(aiofiles, current_new_proxies)
-                            await check_while_on(aiofiles,
-                                                 aiohttp,
-                                                 asyncio,
-                                                 ip_token,
-                                                 channel)
-
-                        # create a new thread
-                        if "new thread" == lowermsg:
-                            author = message.author
-                            await make_new_thread(aiomysql,
-                                                  discord,
-                                                  bot,
-                                                  asyncio,
-                                                  message,
-                                                  check,
-                                                  channel,
-                                                  author)
+                        purge = "beep destroy"
+                        if lowermsg == purge:
+                            await message.channel.purge()
+                            await message.channel.send("You asked for it")
 
                         if "beep look" == lowermsg:
                             await update_url_imgs(aiohttp,
@@ -573,11 +541,63 @@ async def on_message(message):
                             print(nike_urls)
                             await update_nike(aiohttp, asyncio, BeautifulSoup, json, random, branddb, cursor, channel, nike_urls)
 
+                # only messages sent in home
+                if where_msg == home_channel:
+
+                    # prevent bot replying to bot
+                    if member == bot.user:
+                        return
+
+                    home_good = ("site list", "shoe list",
+                                 "find style", "gimme", "help")
+                    if any(message.content.startswith(good) for good in home_good):
+                        await message.delete()
+                        await channel.send("Dirty work in your thread please")
+                    else:
+                        # add new site
+                        addstr = "add"
+                        if lowermsg.startswith(addstr):
+                            await add_site(br_table_array,
+                                           message,
+                                           channel,
+                                           cursor,
+                                           branddb,
+                                           br_list)
+                        # delete site
+                        delete = "delete"
+                        if lowermsg.startswith(delete):
+                            await del_site(message,
+                                           channel,
+                                           cursor,
+                                           branddb)
+                        # refresh proxies
+                        if "freshen up beep" == message.content.lower():
+                            string = "I'll+be+back"
+                            await msg_gif(aiohttp, GIPHY_TOKEN, channel, random, string)
+                            await fresh_while_on(aiofiles, current_new_proxies)
+                            await check_while_on(aiofiles,
+                                                 aiohttp,
+                                                 ip_token,
+                                                 channel,
+                                                 now_time,
+                                                 modified_file_time)
+
+                        # create a new thread
+                        if "new thread" == lowermsg:
+                            author = member
+                            await make_new_thread(aiomysql,
+                                                  discord,
+                                                  bot,
+                                                  message,
+                                                  check,
+                                                  channel,
+                                                  author)
+
                 # only messages sent in threads
                 if isinstance(channel, discord.Thread):
 
                     # prevent bot replying to bot
-                    if message.author == bot.user:
+                    if member == bot.user:
                         return
 
                     greets = ['hey beep', 'yo beep', 'ay beep',
@@ -590,7 +610,7 @@ async def on_message(message):
                         if greet.lower() in lowermsg:
                             string = "yuh+sup"
                             await msg_gif(aiohttp, GIPHY_TOKEN, channel, random, string)
-                            await channel.send(f'Yuh sup @{message.author}')
+                            await channel.send(f'Yuh sup @{member}')
 
                     for nani in nanis:
                         if nani.lower() in lowermsg or lowermsg[0] == "?":

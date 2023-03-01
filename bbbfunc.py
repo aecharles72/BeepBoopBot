@@ -2,6 +2,78 @@
 Beep functions
 
 """
+import asyncio
+
+
+def cancel_task(task):
+    if not task.done():
+        task.cancel()
+
+
+def check(message, author, channel):
+    '''
+    Parameters
+    ----------
+    message : TYPE v
+    author : TYPE v
+    channel : TYPE v
+        DESCRIPTION.
+        check
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    '''
+
+    return author == message.author and channel == message.channel
+
+
+async def tup_to_list(argx):
+    tup = argx
+    arg_list = [a for b in tup for a in b]
+    return arg_list
+
+
+async def tup_to_str(argx):
+    tup = argx
+    arg_list = [a for b in tup for a in b]
+    arg_str = ''.join(arg_list)
+    return arg_str
+
+
+async def tup_to_str_list(argx):
+    tup = argx
+    arg_list = [a for b in tup for a in b]
+    arg_str = '\n'.join(arg_list)
+    return arg_str
+
+
+async def tup_to_dict(argx):
+    tup = argx
+    arg_list = [a for b in tup for a in b]
+    arg_dict = dict(zip(arg_list[::2], arg_list[1::2]))
+    return arg_dict
+
+
+async def tuptup_to_dict(argx):
+    arg_dict = []
+
+    for tup in argx:
+        tup_dict = {'tup_key': tup[0], 'tup_val': tup[1]}
+        arg_dict.append(tup_dict)
+    return arg_dict
+
+
+async def is_pin(message):
+    print(f"ISPIN: {message}")
+    if message.pinned == True:
+        print("ISPIN: TRUE")
+        return False
+    else:
+        print("ISPIN: FALSE")
+        return True
 
 
 def startup_proxies(
@@ -26,7 +98,7 @@ def startup_proxies(
     None.
 
     '''
-    if now_time - modified_file_time > 1800:
+    if now_time - modified_file_time > 43200:
         with open("proxy_list.txt", "w", encoding="utf-8") as p_l:
             print(f"START: {now_time}")
             print(f"START: {modified_file_time}")
@@ -109,20 +181,23 @@ async def del_site(message, channel, cursor, branddb):
     None.
 
     '''
-    site_to_del = message.content[7:].lower()
-    print(f"DELSITE: {site_to_del}")
-    find_site = f"SELECT id FROM shoe_sites WHERE site_url = '{site_to_del}'"
-    print(f"DELSITE: {find_site}")
-    await cursor.execute(find_site)
-    found = await cursor.fetchone()
-    print(f"DELSITE: {found}")
-    found_id = found[0]
-    print(f"DELSITE: {found_id}")
-    delete_site = f"DELETE FROM shoe_sites WHERE id = '{found_id}'"
-    print(f"DELSITE: {delete_site}")
-    await cursor.execute(delete_site)
-    await branddb.commit()
-    await channel.send(f"{found} gone")
+    try:
+        site_to_del = message.content[7:].lower()
+        print(f"DELSITE: {site_to_del}")
+        find_site = f"SELECT id FROM shoe_sites WHERE site_url = '{site_to_del}'"
+        print(f"DELSITE: {find_site}")
+        await cursor.execute(find_site)
+        found = await cursor.fetchone()
+        print(f"DELSITE: {found}")
+        found_id = found[0]
+        print(f"DELSITE: {found_id}")
+        delete_site = f"DELETE FROM shoe_sites WHERE id = '{found_id}'"
+        print(f"DELSITE: {delete_site}")
+        await cursor.execute(delete_site)
+        await branddb.commit()
+        await channel.send(f"{found} gone")
+    except asyncio.CancelledError:
+        print("Coroutine 1 was cancelled.")
 
 
 async def fresh_while_on(aiofiles, current_new_proxies):
@@ -148,7 +223,7 @@ async def fresh_while_on(aiofiles, current_new_proxies):
         await p_l.close()
 
 
-async def check_while_on(aiofiles, aiohttp, asyncio, ip_token, channel):
+async def check_while_on(aiofiles, aiohttp, ip_token, channel, now_time, modified_file_time):
     '''
 
 
@@ -167,30 +242,31 @@ async def check_while_on(aiofiles, aiohttp, asyncio, ip_token, channel):
     None.
 
     '''
-    valid_proxies = []
-    print("Begin Check")
-    async with aiofiles.open("proxy_list.txt", "r") as p_l:
-        proxies = ''.join(await p_l.read()).split()
+    if now_time - modified_file_time > 21600:
         valid_proxies = []
-        async with aiohttp.ClientSession() as session:
+        print("Begin Check")
+        async with aiofiles.open("proxy_list.txt", "r") as p_l:
+            proxies = ''.join(await p_l.read()).split()
+            valid_proxies = []
+            async with aiohttp.ClientSession() as session:
 
-            for proxy in proxies:
-                check_p = proxy.split(":").pop(0)
-                checker = f"https://ipinfo.io/{check_p}/json?token={ip_token}"
-                print(f"CHECKWO: {proxy}")
-                async with session.get(checker) as res:
-                    print(f"CHECKWO: {res.status}")
-                    if res.status == 200:
-                        valid_proxies.append(proxy)
-                        await asyncio.sleep(.25)
-                    else:
-                        await asyncio.sleep(.5)
-                    if res.status == 429:
-                        await channel.send("429 DEAD")
-                        await asyncio.sleep(1)
-                        break
-        async with aiofiles.open("valid_proxies.txt", "w") as o_l:
-            await o_l.write("\n".join(valid_proxies))
+                for proxy in proxies:
+                    check_p = proxy.split(":").pop(0)
+                    checker = f"https://ipinfo.io/{check_p}/json?token={ip_token}"
+                    print(f"CHECKWO: {proxy}")
+                    async with session.get(checker) as res:
+                        print(f"CHECKWO: {res.status}")
+                        if res.status == 200:
+                            valid_proxies.append(proxy)
+                            await asyncio.sleep(.25)
+                        else:
+                            await asyncio.sleep(.5)
+                        if res.status == 429:
+                            await channel.send("429 DEAD")
+                            await asyncio.sleep(1)
+                            break
+            async with aiofiles.open("valid_proxies.txt", "w") as o_l:
+                await o_l.write("\n".join(valid_proxies))
 
 
 async def get_soup(aiohttp, BeautifulSoup, s, channel):
@@ -235,39 +311,42 @@ async def add_group_a(new_url, cursor, branddb, channel, author_id):
     None.
 
     '''
-    if new_url.endswith("/"):
-        url = new_url[:-1]
-    else:
-        url = new_url
-    s_c = url.split('/').pop(-1)
-    name = url.split('/').pop(-2)
-    nmtrash = name.split('-').pop(-1)
-    if nmtrash in name:
-        cleaned_name = name.replace(nmtrash, '')
-        newname = cleaned_name.replace('-', ' ')
-    if "?" in s_c:
-        style_code = s_c.split('?').pop(0)
-        if "." in style_code:
-            style_code = style_code.split(
-                '.').pop(0)
-    elif "." in s_c:
-        style_code = s_c.split('.').pop(0)
-    else:
-        style_code = s_c
-    insert_query = (
-        "INSERT INTO shoes (name, style_code, url, discord_user_id) VALUES (%s,%s,%s,%s);"
-    )  # change brand to model
-    await cursor.execute(
-        insert_query, (newname, style_code, new_url, author_id))
-    await branddb.commit()
-    await channel.send(f'Got it {newname} {style_code}')
-    # checks
-    # await channel.send(url
-    # await channel.send(sc)
-    # await channel.send(name)
-    # await channel.send(nmtrash)
-    # await channel.send(newname)
-    # await channel.send(style_code)
+    try:
+        if new_url.endswith("/"):
+            url = new_url[:-1]
+        else:
+            url = new_url
+        s_c = url.split('/').pop(-1)
+        name = url.split('/').pop(-2)
+        nmtrash = name.split('-').pop(-1)
+        if nmtrash in name:
+            cleaned_name = name.replace(nmtrash, '')
+            newname = cleaned_name.replace('-', ' ')
+        if "?" in s_c:
+            style_code = s_c.split('?').pop(0)
+            if "." in style_code:
+                style_code = style_code.split(
+                    '.').pop(0)
+        elif "." in s_c:
+            style_code = s_c.split('.').pop(0)
+        else:
+            style_code = s_c
+        insert_query = (
+            "INSERT INTO shoes (name, style_code, url, discord_user_id) VALUES (%s,%s,%s,%s);"
+        )  # change brand to model
+        await cursor.execute(
+            insert_query, (newname, style_code, new_url, author_id))
+        await branddb.commit()
+        await channel.send(f'Got it {newname} {style_code}')
+        # checks
+        # await channel.send(url
+        # await channel.send(sc)
+        # await channel.send(name)
+        # await channel.send(nmtrash)
+        # await channel.send(newname)
+        # await channel.send(style_code)
+    except asyncio.CancelledError:
+        print("Coroutine 1 was cancelled.")
 
 
 async def add_group_b(new_url, cursor, branddb, channel, author_id):
@@ -289,34 +368,37 @@ async def add_group_b(new_url, cursor, branddb, channel, author_id):
     None.
 
     '''
-    url = new_url
-    name_sty = url.split("/").pop(-1)
-    if "?" in name_sty:
-        name_style = name_sty.split('?').pop(0)
-    else:
-        name_style = name_sty
-    count = name_style.count("-") - 1
-    style_code = name_style.split(
-        "-", count).pop(-1)
-    nmtrash = style_code
-    if nmtrash in name_style:
-        cleaned_name = name_style.replace(
-            nmtrash, '')
-        newname = cleaned_name.replace('-', ' ')
-    insert_query = (
-        "INSERT INTO shoes (name, style_code, url, discord_user_id) VALUES (%s,%s,%s,%s);"
-    )
-    await cursor.execute(
-        insert_query, (newname, style_code, name_sty, author_id))
-    await branddb.commit()
-    await channel.send(f'Got it {newname} {style_code}')
-    # checks
-    # await channel.send(name_sty)
-    # await channel.send(name_style)
-    # await channel.send(count)
-    # await channel.send(nmtrash)
-    # await channel.send(newname)
-    # await channel.send(style_code)
+    try:
+        url = new_url
+        name_sty = url.split("/").pop(-1)
+        if "?" in name_sty:
+            name_style = name_sty.split('?').pop(0)
+        else:
+            name_style = name_sty
+        count = name_style.count("-") - 1
+        style_code = name_style.split(
+            "-", count).pop(-1)
+        nmtrash = style_code
+        if nmtrash in name_style:
+            cleaned_name = name_style.replace(
+                nmtrash, '')
+            newname = cleaned_name.replace('-', ' ')
+        insert_query = (
+            "INSERT INTO shoes (name, style_code, url, discord_user_id) VALUES (%s,%s,%s,%s);"
+        )
+        await cursor.execute(
+            insert_query, (newname, style_code, name_sty, author_id))
+        await branddb.commit()
+        await channel.send(f'Got it {newname} {style_code}')
+        # checks
+        # await channel.send(name_sty)
+        # await channel.send(name_style)
+        # await channel.send(count)
+        # await channel.send(nmtrash)
+        # await channel.send(newname)
+        # await channel.send(style_code)
+    except asyncio.CancelledError:
+        print("Coroutine 1 was cancelled.")
 
 
 async def add_group_d(new_url, cursor, branddb, channel, author_id):
@@ -338,34 +420,37 @@ async def add_group_d(new_url, cursor, branddb, channel, author_id):
     None.
 
     '''
-    url = new_url
-    if "?" in url:
-        name_sty = url.split("?").pop(0)
-    else:
-        name_sty = url
-    name_sty_trim = name_sty.split("/").pop(-1)
-    count = name_sty_trim.count("-")
-    style_code = name_sty_trim.split(
-        "-", count).pop(-1)
-    nmtrash = style_code
-    if nmtrash in name_sty_trim:
-        cleaned_name = name_sty_trim.replace(
-            nmtrash, '')
-        newname = cleaned_name.replace('-', ' ')
-    insert_query = (
-        "INSERT INTO shoes (name, style_code, url, discord_user_id) VALUES (%s,%s,%s,%s);"
-    )
-    await cursor.execute(
-        insert_query, (newname, style_code, name_sty, author_id))
-    await branddb.commit()
-    await channel.send(f'Got it {newname} {style_code}')
-    # checks
-    # await channel.send(name_sty)
-    # await channel.send(name_sty_trim)
-    # await channel.send(count)
-    # await channel.send(nmtrash)
-    # await channel.send(newname)
-    # await channel.send(style_code)
+    try:
+        url = new_url
+        if "?" in url:
+            name_sty = url.split("?").pop(0)
+        else:
+            name_sty = url
+        name_sty_trim = name_sty.split("/").pop(-1)
+        count = name_sty_trim.count("-")
+        style_code = name_sty_trim.split(
+            "-", count).pop(-1)
+        nmtrash = style_code
+        if nmtrash in name_sty_trim:
+            cleaned_name = name_sty_trim.replace(
+                nmtrash, '')
+            newname = cleaned_name.replace('-', ' ')
+        insert_query = (
+            "INSERT INTO shoes (name, style_code, url, discord_user_id) VALUES (%s,%s,%s,%s);"
+        )
+        await cursor.execute(
+            insert_query, (newname, style_code, name_sty, author_id))
+        await branddb.commit()
+        await channel.send(f'Got it {newname} {style_code}')
+        # checks
+        # await channel.send(name_sty)
+        # await channel.send(name_sty_trim)
+        # await channel.send(count)
+        # await channel.send(nmtrash)
+        # await channel.send(newname)
+        # await channel.send(style_code)
+    except asyncio.CancelledError:
+        print("Coroutine 1 was cancelled.")
 
 
 async def add_shoe(message, channel, cursor, branddb, br_table_array):
@@ -387,68 +472,71 @@ async def add_shoe(message, channel, cursor, branddb, br_table_array):
     None.
 
     '''
-    url = message.content
-    url_input_list = [u.strip() for u in url.split(",")]
-    # print(url_input_list)
-    # print(br_table_array)
-    author_id = message.author.id
-    match_list = [
-        match for match in url_input_list for b in br_table_array if b.lower() in match.lower()]
-    # print(match_list)
-    for new_url in match_list:
-        is_it = ("SELECT url FROM shoes")
-        await cursor.execute(is_it)
-        is_it_table = await cursor.fetchall()
-        is_it_table_array = [a for b in is_it_table for a in b]
-        if new_url in is_it_table_array:
-            await channel.send("^^^dupe^^^")
-            if len(new_url.strip().split(",")) >= 1:
-                continue
-            return
+    try:
+        url = message.content
+        url_input_list = [u.strip() for u in url.split(",")]
+        # print(url_input_list)
+        # print(br_table_array)
+        author_id = message.author.id
+        match_list = [
+            match for match in url_input_list for b in br_table_array if b.lower() in match.lower()]
+        # print(match_list)
+        for new_url in match_list:
+            is_it = ("SELECT url FROM shoes")
+            await cursor.execute(is_it)
+            is_it_table = await cursor.fetchall()
+            is_it_table_array = [a for b in is_it_table for a in b]
+            if new_url in is_it_table_array:
+                await channel.send("^^^dupe^^^")
+                if len(new_url.strip().split(",")) >= 1:
+                    continue
+                return
 
-        # group A check
-        group_a = (
-            "SELECT site_url FROM shoe_sites WHERE site_group = 'A'")
-        await cursor.execute(group_a)
-        group_a_list = [a for b in await cursor.fetchall()
-                        for a in b]
-        for site in group_a_list:
-            if site in new_url:
-                await add_group_a(new_url, cursor, branddb, channel, author_id)
-                break
+            # group A check
+            group_a = (
+                "SELECT site_url FROM shoe_sites WHERE site_group = 'A'")
+            await cursor.execute(group_a)
+            group_a_list = [a for b in await cursor.fetchall()
+                            for a in b]
+            for site in group_a_list:
+                if site in new_url:
+                    await add_group_a(new_url, cursor, branddb, channel, author_id)
+                    break
 
-        # group B check
-        group_b = (
-            "SELECT site_url FROM shoe_sites WHERE site_group = 'B'")
-        await cursor.execute(group_b)
-        group_b_list = [a for b in await cursor.fetchall()
-                        for a in b]
-        for site in group_b_list:
-            if site in new_url:
-                await add_group_b(new_url, cursor, branddb, channel, author_id)
-                break
+            # group B check
+            group_b = (
+                "SELECT site_url FROM shoe_sites WHERE site_group = 'B'")
+            await cursor.execute(group_b)
+            group_b_list = [a for b in await cursor.fetchall()
+                            for a in b]
+            for site in group_b_list:
+                if site in new_url:
+                    await add_group_b(new_url, cursor, branddb, channel, author_id)
+                    break
 
-        # group C check
-        group_c = (
-            "SELECT site_url FROM shoe_sites WHERE site_group = 'C'")
-        await cursor.execute(group_c)
-        group_c_list = [a for b in await cursor.fetchall()
-                        for a in b]
-        for site in group_c_list:
-            if site in new_url:
-                await channel.send("Snipes is a nogo")
-                break
+            # group C check
+            group_c = (
+                "SELECT site_url FROM shoe_sites WHERE site_group = 'C'")
+            await cursor.execute(group_c)
+            group_c_list = [a for b in await cursor.fetchall()
+                            for a in b]
+            for site in group_c_list:
+                if site in new_url:
+                    await channel.send("Snipes is a nogo")
+                    break
 
-        # group D check
-        group_d = (
-            "SELECT site_url FROM shoe_sites WHERE site_group = 'D'")
-        await cursor.execute(group_d)
-        group_d_list = [a for b in await cursor.fetchall()
-                        for a in b]
-        for site in group_d_list:
-            if site in new_url:
-                await add_group_d(new_url, cursor, branddb, channel, author_id)
-                break
+            # group D check
+            group_d = (
+                "SELECT site_url FROM shoe_sites WHERE site_group = 'D'")
+            await cursor.execute(group_d)
+            group_d_list = [a for b in await cursor.fetchall()
+                            for a in b]
+            for site in group_d_list:
+                if site in new_url:
+                    await add_group_d(new_url, cursor, branddb, channel, author_id)
+                    break
+    except asyncio.CancelledError:
+        print("Coroutine 1 was cancelled.")
 
 
 async def search_shoes(discord, aiohttp, random, GIPHY_TOKEN, lowermsg, cursor, channel):
@@ -471,57 +559,61 @@ async def search_shoes(discord, aiohttp, random, GIPHY_TOKEN, lowermsg, cursor, 
     None.
 
     '''
-    async with aiohttp.ClientSession() as session:
-        async with session.get(
-            f"https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=loading&limit=10"
-        ) as response:
+    try:
+        async with aiohttp.ClientSession() as session:
             async with session.get(
-                f"https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=no+its+mine&limit=10"
-            ) as bad_response:
-                print(f"SEARCH: {response.status}")
-                if response.status == 200:
-                    gifs_data = await response.json()
-                    gifs = gifs_data["data"]
-                    if gifs:
-                        gif = random.choice(gifs)["url"]
-                    send_gif = await channel.send(gif)
-                    await send_gif.delete(delay=2)
-            to_find = lowermsg[6:]
-            found_shoes = (
-                f"SELECT * FROM shoes WHERE name LIKE '%{to_find}%' OR url LIKE '%{to_find}%'")
-            await cursor.execute(found_shoes)
-            all_found = await cursor.fetchall()
-            if all_found:
-                page = 1
-                while len(all_found) > 0:
-                    embed = discord.Embed(
-                        title='Search Results', description=f'Search query: {to_find}', color=discord.Color.blue())
-                    for result in all_found[:20]:
-                        name = result[1]
-                        style_code = result[2]
-                        color = result[3]
-                        og_price = result[4]
-                        cur_price = result[5]
-                        url = result[6]
-                        embed.add_field(
-                            name=name, value=f'Style Code: {style_code}\nColor: {color}\nOld Price: \
-    {og_price}\nCurrent Price: {cur_price}\nURL: <{url}>', inline=False)
-                    send_embed = await channel.send(embed=embed)
-                    await send_embed.delete(delay=600)
-                    all_found = all_found[20:]
-                    page += 1
+                f"https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=loading&limit=10"
+            ) as response:
+                async with session.get(
+                    f"https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q=no+its+mine&limit=10"
+                ) as bad_response:
+                    print(f"SEARCH: {response.status}")
+                    if response.status == 200:
+                        gifs_data = await response.json()
+                        gifs = gifs_data["data"]
+                        if gifs:
+                            gif = random.choice(gifs)["url"]
+                        send_gif = await channel.send(gif)
+                        await send_gif.delete(delay=2)
+                to_find = lowermsg[6:]
+                found_shoes = (
+                    f"SELECT * FROM shoes WHERE name LIKE '%{to_find}%' OR url LIKE '%{to_find}%'")
+                await cursor.execute(found_shoes)
+                all_found = await cursor.fetchall()
+                if all_found:
+                    page = 1
+                    while len(all_found) > 0:
+                        embed = discord.Embed(
+                            title='Search Results', description=f'Search query: {to_find}', color=discord.Color.blue())
+                        for result in all_found[:20]:
+                            name = result[1]
+                            style_code = result[2]
+                            color = result[3]
+                            og_price = result[4]
+                            cur_price = result[5]
+                            url = result[6]
+                            embed.add_field(
+                                name=name, value=f'Style Code: {style_code}\nColor: {color}\nOld Price: \
+        {og_price}\nCurrent Price: {cur_price}\nURL: <{url}>', inline=False)
+                        send_embed = await channel.send(embed=embed)
+                        await send_embed.delete(delay=600)
+                        all_found = all_found[20:]
+                        page += 1
 
-                    if len(all_found) > 0:
-                        if bad_response.status == 200:
-                            gifs_data = await response.json()
-                            gifs = gifs_data["data"]
-                            if gifs:
-                                gif = random.choice(gifs)["url"]
-                            send_bad = await channel.send(gif)
-                        await send_bad.delete(delay=10)
-                        await channel.send(f"Page {page} of search results. Be more specific for refined results.")
-            else:
-                await channel.send("No results found.")
+                        if len(all_found) > 0:
+                            if bad_response.status == 200:
+                                gifs_data = await response.json()
+                                gifs = gifs_data["data"]
+                                if gifs:
+                                    gif = random.choice(gifs)["url"]
+                                send_bad = await channel.send(gif)
+                            await send_bad.delete(delay=10)
+                            await channel.send(f"Page {page} of search results. Be more specific for refined results.")
+                else:
+                    await channel.send("No results found.")
+    except asyncio.CancelledError:
+        print("Coroutine 1 was cancelled.")
+
 #             if all_found:
 #                 embed = discord.Embed(
 #                     title='Search Results', description=f'Search query: \
@@ -553,24 +645,39 @@ async def search_shoes(discord, aiohttp, random, GIPHY_TOKEN, lowermsg, cursor, 
 #                 # await channel.send(clean)
 
 
-def check(message, author, channel):
-    '''
-    Parameters
-    ----------
-    message : TYPE v
-    author : TYPE v
-    channel : TYPE v
-        DESCRIPTION.
-        check
-
-    Returns
-    -------
-    TYPE
-        DESCRIPTION.
-
-    '''
-
-    return author == message.author and channel == message.channel
+async def shoe_list(discord, channel, cursor, branddb, member):
+    task_query = f"INSERT INTO tasks_ran (task_name, discord_user_id) VALUES ('task_shoe_list','{member.id}')"
+    await cursor.execute(task_query)
+    await asyncio.sleep(1)
+    s_h = ("SELECT name FROM shoes")
+    await cursor.execute(s_h)
+    shoe_table = await cursor.fetchall()
+    # print(shoe_table)
+    shoe_list = await tup_to_list(shoe_table)
+    # print(shoe_list)
+    # embed = discord.Embed(title="Shoe List", description='\n'.join(shoe_list))
+    max_items_per_embed = 100
+    total_embeds = (len(shoe_list) // max_items_per_embed) + 1
+    print(f"SHLIST: {total_embeds}")
+    for i in range(total_embeds):
+        embed = discord.Embed(title="Super Long Shoe List WHY DID YOU EVEN", description="")
+        start_index = i * max_items_per_embed
+        end_index = min(start_index + max_items_per_embed, len(shoe_list))
+        for item in shoe_list[start_index:end_index]:
+            embed.description += f"- {item}\n"
+        if i == 0:
+            print("1")
+            message = await channel.send(embed=embed)
+            await message.delete(delay=30)
+        else:
+            print("2")
+            embed_more = await channel.send(embed=embed)
+            await embed_more.delete(delay=30)
+    # print("3")
+    # send_shoe = await channel.send(embed=embed)
+    # await send_shoe.delete(delay=30)
+    await branddb.commit()
+    return
 
 
 async def new_thread(discord, message, channel, thread_name, thread_reason, thread_author):
@@ -593,43 +700,47 @@ async def new_thread(discord, message, channel, thread_name, thread_reason, thre
     None.
 
     '''
-    guild = message.guild
-    text_channel = discord.utils.get(guild.channels, name='threads')
-    if not text_channel:
-        text_channel = await channel.category.create_text_channel('threads')
-    thread = await text_channel.create_thread(
-        name=thread_name,
-        auto_archive_duration=0,
-        invitable=False,
-        reason=thread_reason)
-    fresh_thread = discord.utils.get(
-        guild.threads, name=thread_name)
-    new_role = await guild.create_role(name=thread_name)
-    await fresh_thread.add_user(thread_author)
-    await thread_author.add_roles(new_role)
-    await text_channel.send(
-        f'"{message.author}" created in {text_channel.mention}!\n{thread.mention}',
-        mention_author=True)
-    pin_message = await fresh_thread.send('''***
-SITE LIST👀  SHOE LIST👟  FIND STYLE💵  CLEAR🧹
-ADD SITE👍🏾   DEL SITE👎🏾   REFRESH🌪️   SCOOP📥
-GIMME🔍   COMMANDS🤬   HELP❓   ADD SHOE📚 ''')
-    await pin_message.add_reaction("👀")
-    await pin_message.add_reaction("👟")
-    await pin_message.add_reaction("💵")
-    await pin_message.add_reaction("🔍")
-    await pin_message.add_reaction("🤬")
-    await pin_message.add_reaction("❓")
-    await pin_message.add_reaction("📚")
-    await pin_message.add_reaction("📥")
-    await pin_message.add_reaction("👍🏾")
-    await pin_message.add_reaction("👎🏾")
-    await pin_message.add_reaction("🌪️")
-    await pin_message.add_reaction("🧹")
-    await pin_message.pin()
+    try:
+        guild = message.guild
+        text_channel = discord.utils.get(guild.channels, name='threads')
+        if not text_channel:
+            text_channel = await channel.category.create_text_channel('threads')
+        thread = await text_channel.create_thread(
+            name=thread_name,
+            auto_archive_duration=0,
+            invitable=False,
+            reason=thread_reason)
+        fresh_thread = discord.utils.get(
+            guild.threads, name=thread_name)
+        new_role = await guild.create_role(name=thread_name)
+        await fresh_thread.add_user(thread_author)
+        await thread_author.add_roles(new_role)
+        await text_channel.send(
+            f'"{message.author}" created in {text_channel.mention}!\n{thread.mention}',
+            mention_author=True)
+        pin_message = await fresh_thread.send('''***
+    SITE LIST👀  SHOE LIST👟  FIND STYLE💵  CLEAR🧹
+    ADD SITE👍🏾   DEL SITE👎🏾   REFRESH🌪️   SCOOP📥
+    GIMME🔍   COMMANDS🤬   HELP❓   ADD SHOE📚 ''')
+        await pin_message.add_reaction("👀")
+        await pin_message.add_reaction("👟")
+        await pin_message.add_reaction("💵")
+        await pin_message.add_reaction("🔍")
+        await pin_message.add_reaction("🤬")
+        await pin_message.add_reaction("❓")
+        await pin_message.add_reaction("📚")
+        await pin_message.add_reaction("📥")
+        await pin_message.add_reaction("👍🏾")
+        await pin_message.add_reaction("👎🏾")
+        await pin_message.add_reaction("🌪️")
+        await pin_message.add_reaction("🧹")
+        await pin_message.add_reaction("❌")
+        await pin_message.pin()
+    except asyncio.CancelledError:
+        print("Coroutine 1 was cancelled.")
 
 
-async def make_new_thread(aiomysql, discord, bot, asyncio, message, check, channel, author):
+async def make_new_thread(aiomysql, discord, bot, message, check, channel, author):
     '''
 
 
@@ -650,59 +761,66 @@ async def make_new_thread(aiomysql, discord, bot, asyncio, message, check, chann
     None.
 
     '''
-    async with aiomysql.create_pool(
-        host='localhost',
-        port=3306,
-        user='root',
-        password='root',
-        db='beep_ai'
-    ) as beep_ch:
-        print("THREAD: 1")
-        async with beep_ch.acquire() as beep_chan:
-            async with beep_chan.cursor() as beep_chan_cursor:
-                await channel.send("Gimme name 30 SECONDS!")
-                next_resp = False
-                print("THREAD: 2")
-                def check_(m): return check(m, author, channel)
-                print("THREAD: 3")
-                try:
-                    print("THREAD: 4")
-                    # Wait for the user's response
-                    response = await bot.wait_for('message', check=check_, timeout=30)
-                    print(f"THREAD: {response}")
-                    thread_author = response.author
-                    thread_name = response.content
-                    print(f"THREAD: {thread_author}")
-                    print(f"THREAD: {thread_name}")
-                    is_it = f"SELECT thread_name FROM beep_channels \
-                        WHERE thread_name = '{thread_name}'"
-                    print(f"THREAD: {is_it}")
-                    await beep_chan_cursor.execute(is_it)
-                    it_is = await beep_chan_cursor.fetchone()
-                    print(f"THREAD: {it_is}")
-                    if it_is is not None:
-                        taken = await channel.send(
-                            "https://giphy.com/gifs/taken-seat-kDRacElvbMPDO")
-                        await taken.delete(delay=10)
-                        return
-                    next_resp = True
-                except asyncio.TimeoutError:
-                    await channel.send("Too slow, try again!")
-                if next_resp is True:
-                    await channel.send("Ok but why? 30 SECONDS!")
+    try:
+        async with aiomysql.create_pool(
+            host='localhost',
+            port=3306,
+            user='root',
+            password='root',
+            db='beep_ai'
+        ) as beep_ch:
+            print("THREAD: 1")
+            async with beep_ch.acquire() as beep_chan:
+                async with beep_chan.cursor() as beep_chan_cursor:
+                    await channel.send("Gimme name 30 SECONDS!")
+                    next_resp = False
+                    print("THREAD: 2")
+                    def check_(m): return check(m, author, channel)
+                    print("THREAD: 3")
                     try:
+                        print("THREAD: 4")
+                        # Wait for the user's response
                         response = await bot.wait_for('message', check=check_, timeout=30)
-                        thread_reason = response.content
+                        print(f"THREAD: {response}")
+                        thread_author = response.author
+                        thread_name = response.content
+                        no_good = ["Admin", "Beep Boop", "User"]
+                        if thread_name in no_good:
+                            await channel.send("Nice try")
+                            return
+                        print(f"THREAD: {thread_author}")
+                        print(f"THREAD: {thread_name}")
+                        is_it = f"SELECT thread_name FROM beep_channels \
+                            WHERE thread_name = '{thread_name}'"
+                        print(f"THREAD: {is_it}")
+                        await beep_chan_cursor.execute(is_it)
+                        it_is = await beep_chan_cursor.fetchone()
+                        print(f"THREAD: {it_is}")
+                        if it_is is not None:
+                            taken = await channel.send(
+                                "https://giphy.com/gifs/taken-seat-kDRacElvbMPDO")
+                            await taken.delete(delay=10)
+                            return
+                        next_resp = True
                     except asyncio.TimeoutError:
                         await channel.send("Too slow, try again!")
-                    finally:
-                        thread_reason = response.content
-                        await new_thread(discord,
-                                         message,
-                                         channel,
-                                         thread_name,
-                                         thread_reason,
-                                         thread_author)
+                    if next_resp is True:
+                        await channel.send("Ok but why? 30 SECONDS!")
+                        try:
+                            response = await bot.wait_for('message', check=check_, timeout=30)
+                            thread_reason = response.content
+                        except asyncio.TimeoutError:
+                            await channel.send("Too slow, try again!")
+                        finally:
+                            thread_reason = response.content
+                            await new_thread(discord,
+                                             message,
+                                             channel,
+                                             thread_name,
+                                             thread_reason,
+                                             thread_author)
+    except asyncio.CancelledError:
+        print("Coroutine 1 was cancelled.")
 
 
 async def beep_channels(discord, aiomysql, message):
@@ -723,39 +841,42 @@ async def beep_channels(discord, aiomysql, message):
     print("BEEPCH in channel")
 
     # beep ai db
-    async with aiomysql.create_pool(
-        host='localhost',
-        port=3306,
-        user='root',
-        password='root',
-        db='beep_ai'
-    ) as beep_ch:
-        async with beep_ch.acquire() as beep_chan:
-            async with beep_chan.cursor() as beep_chan_cursor:
-                channel_id = message.channel.id
-                print(f"BEEPCH: {channel_id}")
-                channel_name = message.channel
-                print(f"BEEPCH: {channel_name}")
-                discord_user_id = message.author.id
-                print(f"BEEPCH: {discord_user_id}")
-                check_channels = f"SELECT thread_id FROM beep_channels WHERE thread_id = \
-                    '{channel_id}'"
-                await beep_chan_cursor.execute(check_channels)
-                result_1 = await beep_chan_cursor.fetchone()
-                check_channels = f"SELECT thread_name FROM beep_channels WHERE thread_name = \
-                    '{channel_name}'"
-                await beep_chan_cursor.execute(check_channels)
-                result_2 = await beep_chan_cursor.fetchone()
-                if result_1 is None and result_2 is None:
-                    insert_channels = f"INSERT INTO beep_channels (thread_id, thread_name, \
-                        discord_user_id) VALUES ('{channel_id}','{channel_name}',\
-                                                 '{discord_user_id}')"
-                    await beep_chan_cursor.execute(insert_channels)
-                    await beep_chan.commit()
-                elif result_1 is None and result_2 is not None:
-                    discord.thread.delete()
-                else:
-                    print("BEEPCH: Known channel")
+    try:
+        async with aiomysql.create_pool(
+            host='localhost',
+            port=3306,
+            user='root',
+            password='root',
+            db='beep_ai'
+        ) as beep_ch:
+            async with beep_ch.acquire() as beep_chan:
+                async with beep_chan.cursor() as beep_chan_cursor:
+                    channel_id = message.channel.id
+                    print(f"BEEPCH: {channel_id}")
+                    channel_name = message.channel
+                    print(f"BEEPCH: {channel_name}")
+                    discord_user_id = message.author.id
+                    print(f"BEEPCH: {discord_user_id}")
+                    check_channels = f"SELECT thread_id FROM beep_channels WHERE thread_id = \
+                        '{channel_id}'"
+                    await beep_chan_cursor.execute(check_channels)
+                    result_1 = await beep_chan_cursor.fetchone()
+                    check_channels = f"SELECT thread_name FROM beep_channels WHERE thread_name = \
+                        '{channel_name}'"
+                    await beep_chan_cursor.execute(check_channels)
+                    result_2 = await beep_chan_cursor.fetchone()
+                    if result_1 is None and result_2 is None:
+                        insert_channels = f"INSERT INTO beep_channels (thread_id, thread_name, \
+                            discord_user_id) VALUES ('{channel_id}','{channel_name}',\
+                                                     '{discord_user_id}')"
+                        await beep_chan_cursor.execute(insert_channels)
+                        await beep_chan.commit()
+                    elif result_1 is None and result_2 is not None:
+                        discord.thread.delete()
+                    else:
+                        print("BEEPCH: Known channel")
+    except asyncio.CancelledError:
+        print("Coroutine 1 was cancelled.")
 
 
 async def update_url_imgs(aiohttp, BeautifulSoup, headers, branddb, channel, cursor, message):
@@ -785,26 +906,6 @@ async def update_url_imgs(aiohttp, BeautifulSoup, headers, branddb, channel, cur
     await branddb.commit()
 
 
-async def tup_to_list(argx):
-    tup = argx
-    arg_list = [a for b in tup for a in b]
-    return arg_list
-
-
-async def tup_to_str(argx):
-    tup = argx
-    arg_list = [a for b in tup for a in b]
-    arg_str = ''.join(arg_list)
-    return arg_str
-
-
-async def tup_to_str_list(argx):
-    tup = argx
-    arg_list = [a for b in tup for a in b]
-    arg_str = '\n'.join(arg_list)
-    return arg_str
-
-
 async def msg_gif(aiohttp, GIPHY_TOKEN, channel, random, string):
     async with aiohttp.ClientSession() as session:
         async with session.get(
@@ -820,28 +921,21 @@ async def msg_gif(aiohttp, GIPHY_TOKEN, channel, random, string):
                     return await gif_send.delete(delay=10)
 
 
-async def is_pin(message):
-    print(f"ISPIN: {message}")
-    if message.pinned == True:
-        print("ISPIN: TRUE")
-        return False
-    else:
-        print("ISPIN: FALSE")
-        return True
-
-
-async def get_em(aiohttp, asyncio, BeautifulSoup, bot, channel, add_shoe_channel, url):
-    shoe_channel = bot.get_channel(add_shoe_channel)
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            html = await resp.text()
-            soup = BeautifulSoup(html, 'html.parser')
-            links = []
-            for link in soup.find_all('a'):
-                href = link.get('href')
-                if href and href.startswith('http') and ".com/t/" in href:
-                    links.append(href)
-                    site_send = await shoe_channel.send(href)
-                    await site_send.delete(delay=5)
-                    await asyncio.sleep(1)
-            await channel.send(f"{url} Done")
+async def get_em(aiohttp, BeautifulSoup, bot, channel, add_shoe_channel, cursor, url):
+    try:
+        shoe_channel = bot.get_channel(add_shoe_channel)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                html = await resp.text()
+                soup = BeautifulSoup(html, 'html.parser')
+                links = []
+                for link in soup.find_all('a'):
+                    href = link.get('href')
+                    if href and href.startswith('http') and ".com/t/" in href:
+                        links.append(href)
+                        site_send = await shoe_channel.send(href)
+                        await site_send.delete(delay=5)
+                        await asyncio.sleep(1)
+                await channel.send(f"{url} Done")
+    except asyncio.CancelledError:
+        print("Coroutine 1 was cancelled.")
