@@ -76,13 +76,15 @@ is--current-price css-tpaepq"
                                             print(src_value)
                                             nike_color = soup.find(
                                                 "li", {
-                                                    "class": "description-preview__color-description ncss-li"
+                                                    "class":
+                                                    "description-preview__color-description ncss-li"
                                                 }).get_text()
                                             nike_color = nike_color.split(
                                                 ":").pop(-1)
                                             # await channel.send(nike_color)
                                             print("CHECK: 1")
-                                            color_query = f"UPDATE shoes SET color ='{nike_color}' WHERE url = '{s}'"
+                                            color_query = f"UPDATE shoes SET color ='{nike_color}' \
+                                                WHERE url = '{s}'"
                                             await cursor.execute(color_query)
                                             name_query = f"SELECT name FROM shoes WHERE url = '{s}'"
                                             await cursor.execute(name_query)
@@ -91,17 +93,20 @@ is--current-price css-tpaepq"
                                             # print(scode_name)
                                             name = [a for b in scode_name for a in b]
                                             name = ''.join(name)
-                                            price_query = f"SELECT price FROM shoes WHERE url = '{s}'"
+                                            price_query = f"SELECT price FROM shoes WHERE url \
+                                                = '{s}'"
                                             await cursor.execute(price_query)
                                             price_q = await cursor.fetchone()
                                             print("CHECK: 2")
                                             # await channel.send(price_q)
                                             await branddb.commit()
                                             embed = discord.Embed(
-                                                title='Search Results', description=f'Search query: {scode}', color=discord.Color.blue())
+                                                title='Search Results', description=f'Search query:\
+                                                    {scode}', color=discord.Color.blue())
 
                                             embed.add_field(
-                                                name=name, value=f'Style Code: {scode}\nColor: {nike_color}\nOld Price: {price_q[0]}\nCurrent Price: {price_q}', inline=False)
+                                                name=name, value=f'Style Code: {scode}\nColor: \
+                    {nike_color}\nOld Price: {price_q[0]}\nCurrent Price: {price_q}', inline=False)
 
                                             if price_q[0] is None:
                                                 insert_query = f"UPDATE shoes SET price =\
@@ -484,7 +489,7 @@ proxies")
                 await channel.send("Done")
 
 
-async def update_nike(aiohttp, asyncio, BeautifulSoup, json, random, branddb, cursor, channel, nike_urls):
+async def update_nike(aiohttp, asyncio, BeautifulSoup, random, branddb, cursor, channel, nike_urls):
     with open("valid_proxies.txt", "r", encoding="utf-8") as v_p:
         print("UPDATE NIKE")
         success = False
@@ -504,7 +509,8 @@ async def update_nike(aiohttp, asyncio, BeautifulSoup, json, random, branddb, cu
                                 exp_wrapper = soup.find("div", {"id": "experience-wrapper"})
                                 if exp_wrapper.find(
                                     "div", {
-                                        "class": "product-price is--current-price css-s56yt7 css-xq7tty"}) is not None:
+                                        "class":
+                                        "product-price is--current-price css-s56yt7 css-xq7tty"}) is not None:
                                     nike_current_price = exp_wrapper.find(
                                         "div", {
                                             "product-price is--current-price css-s56yt7 css-xq7tty"}).get_text()
@@ -528,7 +534,8 @@ async def update_nike(aiohttp, asyncio, BeautifulSoup, json, random, branddb, cu
                                 # print(nike_img_json)
                                 # print(nike_img_url)
                                 print("CHECK: 1")
-                                color_query = f"UPDATE shoes SET color ='{nike_color}' WHERE url = '{i}'"
+                                color_query = f"UPDATE shoes SET color ='{nike_color}' WHERE url \
+                                    = '{i}'"
                                 await cursor.execute(color_query)
                                 name_query = f"SELECT name FROM shoes WHERE url = '{i}'"
                                 await cursor.execute(name_query)

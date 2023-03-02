@@ -28,12 +28,12 @@ import random
 import time
 import datetime
 from datetime import timezone
+# import json
 import asyncio
 import nest_asyncio
 import aiohttp
 import aiofiles
 import aiomysql
-import json
 import discord
 import requests
 import openai
@@ -50,14 +50,14 @@ from bbbfunc import (
     search_shoes,
     make_new_thread,
     beep_channels,
-    update_url_imgs,
+    # update_url_imgs,
     # tup_to_str,
     tup_to_str_list,
     msg_gif,
     tup_to_list,
-    tup_to_dict,
+    # tup_to_dict,
     get_em,
-    cancel_task,
+    # cancel_task,
     shoe_list)
 from beep_chatgpt import handle_message
 from beep_price import find_style_code, update_nike
@@ -233,7 +233,7 @@ async def on_raw_reaction_add(payload):
                 print("RAW EMO: 4")
                 if click_emoji == discord.PartialEmoji(name='👟'):
                     task_shoe_list = asyncio.create_task(
-                        shoe_list(discord, channel, cursor, branddb, member))
+                        shoe_list(discord, channel, cursor, branddb, member), name="task_shoe_list")
                     await task_shoe_list
                 print("RAW EMO: 5")
                 if click_emoji == discord.PartialEmoji(name='💵'):
@@ -323,11 +323,14 @@ async def on_raw_reaction_add(payload):
                 if click_emoji == discord.PartialEmoji(name='📥'):
                     with open("scoop_list.txt", "r", encoding="utf-8") as s_l:
                         for url in s_l:
-                            task_query = f"INSERT INTO tasks_ran (task_name, discord_user_id) VALUES ('task_get_em','{member.id}')"
+                            task_get_em = asyncio.create_task(
+                                get_em(
+                                    aiohttp, BeautifulSoup, bot, channel, add_shoe_channel, url), name="task_get_em")
+                            task_query = f"INSERT INTO tasks_ran (task_name, discord_user_id) \
+                                VALUES ('task_get_em','{member.id}')"
                             await cursor.execute(task_query)
                             await branddb.commit()
-                            task_get_em = asyncio.create_task(
-                                get_em(aiohttp, BeautifulSoup, bot, channel, add_shoe_channel, cursor, url))
+
                             await task_get_em
                             await asyncio.sleep(1)
 
@@ -416,29 +419,43 @@ async def on_raw_reaction_add(payload):
 
                 print()
 
-                if click_emoji == discord.PartialEmoji(name="❌"):
-                    task_query = f"SELECT task_name, timestamp FROM tasks_ran WHERE discord_user_id = '{member.id}'"
-                    await cursor.execute(task_query)
-                    all_tasks = await cursor.fetchall()
-                    print(f"FQ: {all_tasks}")
-                    for tup in all_tasks:
-                        print(f"FQ: {tup}")
-                        all_tasks_list = {}
-                        task_dict = {'task_name': tup[0], 'timestamp': tup[1]}
-                        print(f"FQ: {task_dict}")
-                        all_tasks_list.append(task_dict)
+                # if click_emoji == discord.PartialEmoji(name="❌"):
+                #     with open("scoop_list.txt", "r", encoding="utf-8") as s_l:
+                #         for url in s_l:
+                #             task_get_em = asyncio.create_task(
+                #                 get_em(aiohttp, BeautifulSoup, bot, channel, add_shoe_channel, url), name="task_get_em")
+                #     task_query = f"SELECT task_name, timestamp FROM tasks_ran WHERE discord_user_id = '{member.id}'"
+                #     await cursor.execute(task_query)
+                #     all_tasks = await cursor.fetchall()
+                #     print(f"FQ:AT {all_tasks}")
+                #     now_timestamp = datetime.datetime.now().timestamp()
+                #     all_tasks_list = []
+                #     for tup in all_tasks:
+                #         print(f"FQ:tup {tup}")
+                #         task_dict = {'task_name': tup[0], 'timestamp': tup[1]}
+                #         print(f"FQ:TD {task_dict}")
+                #         all_tasks_list.append(task_dict)
 
-                        print(f"FQ: {all_tasks_list}")
-                        for item in all_tasks_list:
-                            for key, value in item.items():
-                                print(f"FQ: {value}")
-                                if isinstance(value, datetime.datetime):
-                                    task_time = value.time()
-                                    print(f"FQ: {task_time}")
-                                    if task_time - now_time < 30:
-                                        current_task = key
-                                        print(current_task)
-                                        await current_task.cancel(msg=f"Cancelled {current_task}")
+                #     print(f"FQ:ATL {all_tasks_list}")
+                #     for item in all_tasks_list:
+                #         # for key, value in item.items():
+                #         # print(f"FQ:key {key}")
+                #         # print(f"FQ:value {value}")
+                #         task_name = item["task_name"]
+                #         timestamp = item["timestamp"]
+                #         if isinstance(timestamp, datetime.datetime):
+                #             task_time = timestamp.timestamp()
+                #             print(f"FQ:task time {task_time}")
+                #             print(f"FQ:now time {now_timestamp}")
+                #             if abs(now_timestamp - task_time) <= 30:
+                #                 current_task = eval(task_name)
+                #                 print(current_task)
+                #                 all_pending = asyncio.all_tasks()
+                #                 print(all_pending)
+                #                 for task in all_pending:
+                #                     if current_task == task.coro.__name__:
+                #                         current_task.cancel(msg=f"Cancelled {current_task}")
+                # return
 
 # when a message is sent in the discord channel
 
@@ -496,17 +513,18 @@ async def on_message(message):
 
                         purge = "beep destroy"
                         if lowermsg == purge:
-                            await message.channel.purge()
                             await message.channel.send("You asked for it")
+                            await asyncio.sleep(3)
+                            await message.channel.purge()
 
-                        if "beep look" == lowermsg:
-                            await update_url_imgs(aiohttp,
-                                                  BeautifulSoup,
-                                                  headers,
-                                                  branddb,
-                                                  channel,
-                                                  cursor,
-                                                  message)
+                        # if "beep look" == lowermsg:
+                        #     await update_url_imgs(aiohttp,
+                        #                           BeautifulSoup,
+                        #                           headers,
+                        #                           branddb,
+                        #                           channel,
+                        #                           cursor,
+                        #                           message)
 
                         gettem = "gettem"
                         if lowermsg.startswith(gettem):
@@ -522,7 +540,8 @@ async def on_message(message):
                                         links = []
                                         for link in soup.find_all('a'):
                                             href = link.get('href')
-                                            if href and href.startswith('http') and ".com/t/" in href:
+                                            if href and href.startswith(
+                                                    'http') and ".com/t/" in href:
                                                 links.append(href)
                                                 await shoe_channel.send(href)
                                                 await asyncio.sleep(1)
@@ -539,7 +558,8 @@ async def on_message(message):
                                 if "www.nike.com" in url:
                                     nike_urls.append(url)
                             print(nike_urls)
-                            await update_nike(aiohttp, asyncio, BeautifulSoup, json, random, branddb, cursor, channel, nike_urls)
+                            await update_nike(
+                                aiohttp, asyncio, BeautifulSoup, random, branddb, cursor, channel, nike_urls)
 
                 # only messages sent in home
                 if where_msg == home_channel:
@@ -631,8 +651,8 @@ async def on_message(message):
                         s_h = ("SELECT name FROM shoes")
                         await cursor.execute(s_h)
                         shoe_table = await cursor.fetchall()
-                        shoe_list = await tup_to_str_list(shoe_table)
-                        await channel.send(shoe_list)
+                        shoe_list_2 = await tup_to_str_list(shoe_table)
+                        await channel.send(shoe_list_2)
                         return
 
                     # input find style (style code)

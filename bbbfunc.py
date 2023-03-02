@@ -6,6 +6,19 @@ import asyncio
 
 
 def cancel_task(task):
+    '''
+
+
+    Parameters
+    ----------
+    task : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    '''
     if not task.done():
         task.cancel()
 
@@ -31,12 +44,40 @@ def check(message, author, channel):
 
 
 async def tup_to_list(argx):
+    '''
+
+
+    Parameters
+    ----------
+    argx : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    arg_list : TYPE
+        DESCRIPTION.
+
+    '''
     tup = argx
     arg_list = [a for b in tup for a in b]
     return arg_list
 
 
 async def tup_to_str(argx):
+    '''
+
+
+    Parameters
+    ----------
+    argx : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    arg_str : TYPE
+        DESCRIPTION.
+
+    '''
     tup = argx
     arg_list = [a for b in tup for a in b]
     arg_str = ''.join(arg_list)
@@ -44,6 +85,20 @@ async def tup_to_str(argx):
 
 
 async def tup_to_str_list(argx):
+    '''
+
+
+    Parameters
+    ----------
+    argx : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    arg_str : TYPE
+        DESCRIPTION.
+
+    '''
     tup = argx
     arg_list = [a for b in tup for a in b]
     arg_str = '\n'.join(arg_list)
@@ -51,6 +106,20 @@ async def tup_to_str_list(argx):
 
 
 async def tup_to_dict(argx):
+    '''
+
+
+    Parameters
+    ----------
+    argx : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    arg_dict : TYPE
+        DESCRIPTION.
+
+    '''
     tup = argx
     arg_list = [a for b in tup for a in b]
     arg_dict = dict(zip(arg_list[::2], arg_list[1::2]))
@@ -58,6 +127,20 @@ async def tup_to_dict(argx):
 
 
 async def tuptup_to_dict(argx):
+    '''
+
+
+    Parameters
+    ----------
+    argx : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    arg_dict : TYPE
+        DESCRIPTION.
+
+    '''
     arg_dict = []
 
     for tup in argx:
@@ -67,8 +150,22 @@ async def tuptup_to_dict(argx):
 
 
 async def is_pin(message):
+    '''
+
+
+    Parameters
+    ----------
+    message : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    bool
+        DESCRIPTION.
+
+    '''
     print(f"ISPIN: {message}")
-    if message.pinned == True:
+    if message.pinned is True:
         print("ISPIN: TRUE")
         return False
     else:
@@ -584,7 +681,8 @@ async def search_shoes(discord, aiohttp, random, GIPHY_TOKEN, lowermsg, cursor, 
                     page = 1
                     while len(all_found) > 0:
                         embed = discord.Embed(
-                            title='Search Results', description=f'Search query: {to_find}', color=discord.Color.blue())
+                            title='Search Results', description=f'Search query: {to_find}',
+                            color=discord.Color.blue())
                         for result in all_found[:20]:
                             name = result[1]
                             style_code = result[2]
@@ -593,8 +691,8 @@ async def search_shoes(discord, aiohttp, random, GIPHY_TOKEN, lowermsg, cursor, 
                             cur_price = result[5]
                             url = result[6]
                             embed.add_field(
-                                name=name, value=f'Style Code: {style_code}\nColor: {color}\nOld Price: \
-        {og_price}\nCurrent Price: {cur_price}\nURL: <{url}>', inline=False)
+                                name=name, value=f'Style Code: {style_code}\nColor: \
+{color}\nOld Price:{og_price}\nCurrent Price: {cur_price}\nURL: <{url}>', inline=False)
                         send_embed = await channel.send(embed=embed)
                         await send_embed.delete(delay=600)
                         all_found = all_found[20:]
@@ -608,62 +706,55 @@ async def search_shoes(discord, aiohttp, random, GIPHY_TOKEN, lowermsg, cursor, 
                                     gif = random.choice(gifs)["url"]
                                 send_bad = await channel.send(gif)
                             await send_bad.delete(delay=10)
-                            await channel.send(f"Page {page} of search results. Be more specific for refined results.")
+                            await channel.send(f"Page {page} of search results. \
+                                               Be more specific for refined results.")
                 else:
                     await channel.send("No results found.")
     except asyncio.CancelledError:
         print("Coroutine 1 was cancelled.")
 
-#             if all_found:
-#                 embed = discord.Embed(
-#                     title='Search Results', description=f'Search query: \
-#    {to_find}', color=discord.Color.blue())
-#                 for result in all_found:
-#                     # item_id = result[0]
-#                     name = result[1]
-#                     style_code = result[2]
-#                     color = result[3]
-#                     og_price = result[4]
-#                     cur_price = result[5]
-#                     url = result[6]
-#                     print(url)
-#                     embed.add_field(
-#                         name=name, value=f'Style Code: {style_code}\nColor: {color}\nOld Price: \
-# {og_price}\nCurrent Price: {cur_price}\nURL: <{url}>', inline=False)
-#                 await channel.send(embed=embed)
-#             if len(embed) >= 2000:
-#                 if bad_response.status == 200:
-#                     gifs_data = await response.json()
-#                     gifs = gifs_data["data"]
-#                     if gifs:
-#                         gif = random.choice(gifs)["url"]
-#                     send_bad = await channel.send(gif)
-#                 await send_bad.delete(delay=10)
-#                 await channel.send("Be more specific")
-#             else:
-#                 return
-#                 # await channel.send(clean)
-
 
 async def shoe_list(discord, channel, cursor, branddb, member):
-    task_query = f"INSERT INTO tasks_ran (task_name, discord_user_id) VALUES ('task_shoe_list','{member.id}')"
+    '''
+
+
+    Parameters
+    ----------
+    discord : TYPE
+        DESCRIPTION.
+    channel : TYPE
+        DESCRIPTION.
+    cursor : TYPE
+        DESCRIPTION.
+    branddb : TYPE
+        DESCRIPTION.
+    member : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    '''
+    task_query = f"INSERT INTO tasks_ran (task_name, discord_user_id) VALUES ('task_shoe_list',\
+        '{member.id}')"
     await cursor.execute(task_query)
     await asyncio.sleep(1)
     s_h = ("SELECT name FROM shoes")
     await cursor.execute(s_h)
     shoe_table = await cursor.fetchall()
     # print(shoe_table)
-    shoe_list = await tup_to_list(shoe_table)
-    # print(shoe_list)
-    # embed = discord.Embed(title="Shoe List", description='\n'.join(shoe_list))
+    shoes_list = await tup_to_list(shoe_table)
+    # print(shoes_list)
+    # embed = discord.Embed(title="Shoe List", description='\n'.join(shoes_list))
     max_items_per_embed = 100
-    total_embeds = (len(shoe_list) // max_items_per_embed) + 1
+    total_embeds = (len(shoes_list) // max_items_per_embed) + 1
     print(f"SHLIST: {total_embeds}")
     for i in range(total_embeds):
         embed = discord.Embed(title="Super Long Shoe List WHY DID YOU EVEN", description="")
         start_index = i * max_items_per_embed
-        end_index = min(start_index + max_items_per_embed, len(shoe_list))
-        for item in shoe_list[start_index:end_index]:
+        end_index = min(start_index + max_items_per_embed, len(shoes_list))
+        for item in shoes_list[start_index:end_index]:
             embed.description += f"- {item}\n"
         if i == 0:
             print("1")
@@ -682,7 +773,6 @@ async def shoe_list(discord, channel, cursor, branddb, member):
 
 async def new_thread(discord, message, channel, thread_name, thread_reason, thread_author):
     '''
-
 
     Parameters
     ----------
@@ -734,7 +824,7 @@ async def new_thread(discord, message, channel, thread_name, thread_reason, thre
         await pin_message.add_reaction("👎🏾")
         await pin_message.add_reaction("🌪️")
         await pin_message.add_reaction("🧹")
-        await pin_message.add_reaction("❌")
+        # await pin_message.add_reaction("❌")
         await pin_message.pin()
     except asyncio.CancelledError:
         print("Coroutine 1 was cancelled.")
@@ -775,7 +865,9 @@ async def make_new_thread(aiomysql, discord, bot, message, check, channel, autho
                     await channel.send("Gimme name 30 SECONDS!")
                     next_resp = False
                     print("THREAD: 2")
-                    def check_(m): return check(m, author, channel)
+
+                    def check_(m):
+                        return check(m, author, channel)
                     print("THREAD: 3")
                     try:
                         print("THREAD: 4")
@@ -879,34 +971,56 @@ async def beep_channels(discord, aiomysql, message):
         print("Coroutine 1 was cancelled.")
 
 
-async def update_url_imgs(aiohttp, BeautifulSoup, headers, branddb, channel, cursor, message):
-    grab_scodes = "SELECT style_code FROM shoes"
-    await cursor.execute(grab_scodes)
-    all_scodes = await cursor.fetchall()
-    print(f"UPURL: {all_scodes}")
-    all_scodes_list = [a for b in all_scodes for a in b]
-    print(f"UPURL: {all_scodes_list}")
-    for style_code in all_scodes_list:
-        # https: // www.google.com/imghp?hl = en & authuser = 0 & ogbl
-        query = "https://www.google.com/search?q={style_code}"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(query, headers=headers) as response:
-                print(f"UPURL: {response.status}")
-                if response.status == 200:
-                    text_content = await response.text()
-                    soup = BeautifulSoup(
-                        text_content,
-                        "html.parser")
-                    # print(f"UPURL: {soup}")
-                    found_image = soup.find("x22data:image").get_text()
-                    print(f"UPURL: {found_image}")
-                    add_img_url = f"UPDATE shoes SET image_url = '{found_image}' WHERE style_code \
-= '{style_code}'"
-                    await cursor.execute(add_img_url)
-    await branddb.commit()
+# async def update_url_imgs(aiohttp, BeautifulSoup, headers, branddb, channel, cursor, message):
+#     grab_scodes = "SELECT style_code FROM shoes"
+#     await cursor.execute(grab_scodes)
+#     all_scodes = await cursor.fetchall()
+#     print(f"UPURL: {all_scodes}")
+#     all_scodes_list = [a for b in all_scodes for a in b]
+#     print(f"UPURL: {all_scodes_list}")
+#     for style_code in all_scodes_list:
+#         # https: // www.google.com/imghp?hl = en & authuser = 0 & ogbl
+#         query = "https://www.google.com/search?q={style_code}"
+#         async with aiohttp.ClientSession() as session:
+#             async with session.get(query, headers=headers) as response:
+#                 print(f"UPURL: {response.status}")
+#                 if response.status == 200:
+#                     text_content = await response.text()
+#                     soup = BeautifulSoup(
+#                         text_content,
+#                         "html.parser")
+#                     # print(f"UPURL: {soup}")
+#                     found_image = soup.find("x22data:image").get_text()
+#                     print(f"UPURL: {found_image}")
+#                     add_img_url = f"UPDATE shoes SET image_url = '{found_image}' WHERE style_code \
+# = '{style_code}'"
+#                     await cursor.execute(add_img_url)
+#     await branddb.commit()
 
 
 async def msg_gif(aiohttp, GIPHY_TOKEN, channel, random, string):
+    '''
+
+
+    Parameters
+    ----------
+    aiohttp : TYPE
+        DESCRIPTION.
+    GIPHY_TOKEN : TYPE
+        DESCRIPTION.
+    channel : TYPE
+        DESCRIPTION.
+    random : TYPE
+        DESCRIPTION.
+    string : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    '''
     async with aiohttp.ClientSession() as session:
         async with session.get(
             f'https://api.giphy.com/v1/gifs/search?api_key={GIPHY_TOKEN}&q={string}&limit=10'
@@ -921,21 +1035,48 @@ async def msg_gif(aiohttp, GIPHY_TOKEN, channel, random, string):
                     return await gif_send.delete(delay=10)
 
 
-async def get_em(aiohttp, BeautifulSoup, bot, channel, add_shoe_channel, cursor, url):
+async def get_em(aiohttp, BeautifulSoup, bot, channel, add_shoe_channel, url):
+    '''
+
+
+    Parameters
+    ----------
+    aiohttp : TYPE
+        DESCRIPTION.
+    BeautifulSoup : TYPE
+        DESCRIPTION.
+    bot : TYPE
+        DESCRIPTION.
+    channel : TYPE
+        DESCRIPTION.
+    add_shoe_channel : TYPE
+        DESCRIPTION.
+    url : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    '''
     try:
-        shoe_channel = bot.get_channel(add_shoe_channel)
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                html = await resp.text()
-                soup = BeautifulSoup(html, 'html.parser')
-                links = []
-                for link in soup.find_all('a'):
-                    href = link.get('href')
-                    if href and href.startswith('http') and ".com/t/" in href:
-                        links.append(href)
-                        site_send = await shoe_channel.send(href)
-                        await site_send.delete(delay=5)
-                        await asyncio.sleep(1)
-                await channel.send(f"{url} Done")
+        while True:
+            shoe_channel = bot.get_channel(add_shoe_channel)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as resp:
+                    html = await resp.text()
+                    soup = BeautifulSoup(html, 'html.parser')
+                    links = []
+                    for link in soup.find_all('a'):
+                        href = link.get('href')
+                        if href and href.startswith('http') and ".com/t/" in href:
+                            links.append(href)
+                            site_send = await shoe_channel.send(href)
+                            await site_send.delete(delay=7)
+                            await asyncio.sleep(2)
+                    await channel.send(f"{url} Done")
+            await asyncio.sleep(1)
+        if asyncio.current_task().cancelled():
+            return
     except asyncio.CancelledError:
         print("Coroutine 1 was cancelled.")
