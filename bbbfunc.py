@@ -3,6 +3,7 @@ Beep functions
 
 """
 import asyncio
+import hashlib
 
 
 def cancel_task(task):
@@ -41,6 +42,96 @@ def check(message, author, channel):
     '''
 
     return author == message.author and channel == message.channel
+
+
+async def new_site_user(aiomysql, bot, message, member, channel):
+
+    author = message.author
+    try:
+        async with aiomysql.create_pool(
+            host='localhost',
+            port=3306,
+            user='root',
+            password='root',
+            db='beep_site'
+        ) as beep_site:
+            print("PASS: 1")
+            async with beep_site.acquire() as site_users:
+                async with site_users.cursor() as site_users_cursor:
+                    next_resp = False
+                    print("PASS: 2")
+
+                    def check_(m):
+                        return check(m, author, channel)
+                    print("PASS: 3")
+                    try:
+                        await channel.send("Username must be 3-10 characters\n\
+                                           E-mail must be a valid US e-mail address\n\
+                                               You have 30 seconds\n\
+                                               Username & Email:")
+                        print("PASS: 4")
+                        # Wait for the user's response
+                        response = await bot.wait_for('message', check=check_, timeout=30)
+                        print(f"PASS: {response}")
+                        thread_author = response.author
+                        split_mess = response.content.split()
+                        author_nick = split_mess[0]
+                        print(f"PASS: {author_nick}")
+                        author_email = split_mess[1]
+                        print(f"PASS: {author_email}")
+                        must_end = (".com", ".org", ".edu", ".co")
+                        if any(message.content.endswith(must_end) for end in must_end):
+                            if "@" not in author_email or not author_email.endswith(must_end) or len(author_nick) < 3 or len(split_mess) != 2:
+                                await channel.send("Invalid.\n\
+                            Must have a space between username and valid email address.")
+                                return
+                        print(f"PASS: {thread_author}")
+                        print(f"PASS: {author_email}")
+
+                        is_it = f"SELECT email FROM users \
+                            WHERE email = '{author_email}'"
+                        print(f"PASS: {is_it}")
+                        await site_users_cursor.execute(is_it)
+                        it_is = await site_users_cursor.fetchone()
+                        print(f"PASS: {it_is}")
+                        if it_is is not None:
+                            taken = await channel.send(
+                                "https://giphy.com/gifs/taken-seat-kDRacElvbMPDO\nThis e-mail is \
+                                    already associated to a user")
+                            await taken.delete(delay=10)
+                            return
+                        next_resp = True
+                    except asyncio.TimeoutError:
+                        await channel.send("Too slow, try again!")
+                    if next_resp is True:
+                        await channel.send("Password must be 3-10 characters\n\n\
+                                           PLEASE BE AWARE WHEN YOU HIT ENTER\n\
+                                           YOUR PASSWORD WILL BE SET AND THE\n\
+                                           MESSAGE WILL BE DELETED\n\n\
+                                               You have 40 seconds\n\
+                                           What's your password?")
+                        try:
+                            response = await bot.wait_for('message', check=check_, timeout=40)
+                            author_password = response.content
+                            if len(author_password) < 3 or len(author_password) > 10:
+                                await channel.send("Invalid Password")
+                                return
+                        except asyncio.TimeoutError:
+                            await channel.send("Too slow, try again!")
+                        finally:
+                            salt = 'XyZzy12*_'
+                            hashed_password = hashlib.md5(
+                                (salt + author_password).encode('utf-8')
+                            ).hexdigest()
+                            new_site_user = f"INSERT INTO users (name, email, password, discord_user_id) VALUES \
+                                ('{author_nick}','{author_email}','{hashed_password}', '{member.id}')"
+                            await site_users_cursor.execute(new_site_user)
+                            await site_users.commit()
+                            await response.delete()
+                            await channel.send(
+                                "Account created! Head over to www.eddiebueno.com/beepboop")
+    except asyncio.CancelledError:
+        print("Coroutine 1 was cancelled.")
 
 
 async def tup_to_list(argx):
@@ -816,6 +907,7 @@ async def new_thread(discord, message, channel, thread_name, thread_reason, thre
         await pin_message.add_reaction("👟")
         await pin_message.add_reaction("💵")
         await pin_message.add_reaction("🔍")
+        await pin_message.add_reaction("🔑")
         await pin_message.add_reaction("🤬")
         await pin_message.add_reaction("❓")
         await pin_message.add_reaction("📚")

@@ -58,7 +58,8 @@ from bbbfunc import (
     # tup_to_dict,
     get_em,
     # cancel_task,
-    shoe_list)
+    shoe_list,
+    new_site_user)
 from beep_chatgpt import handle_message
 from beep_price import find_style_code, update_nike
 
@@ -157,7 +158,7 @@ async def on_member_join(member):
     if member.id == bot.user.id:
         return
 
-    member.add_roles()
+    await member.add_roles()
 
     channel = bot.get_channel(home_channel)
     string = "welcome"
@@ -418,6 +419,12 @@ async def on_raw_reaction_add(payload):
                     await help_send.delete(delay=30)
 
                 print()
+                if click_emoji == discord.PartialEmoji(name="🔑"):
+                    await channel.send('''
+        Access to Beeps site www.eddiebueno.com/beepboop
+
+    Want in?  Type Create Account below and answer the prompts!
+                                       ''')
 
                 # if click_emoji == discord.PartialEmoji(name="❌"):
                 #     with open("scoop_list.txt", "r", encoding="utf-8") as s_l:
@@ -637,6 +644,10 @@ async def on_message(message):
                             string = "nani"
                             await msg_gif(aiohttp, GIPHY_TOKEN, channel, random, string)
                             await channel.send("Nani?!")
+
+                    create_site_account = "create account"
+                    if lowermsg == create_site_account:
+                        await new_site_user(aiomysql, bot, message, member, channel)
 
                     # get site list
                     give_site_list = "site list"
