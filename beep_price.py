@@ -549,7 +549,6 @@ async def update_nike(aiohttp, asyncio, BeautifulSoup, random, branddb, cursor, 
                                 price_q = await cursor.fetchone()
                                 # print("CHECK: 2")
                                 # await channel.send(price_q)
-                                await branddb.commit()
                                 if price_q[0] is None:
                                     insert_query = f"UPDATE shoes SET price =\
 '{nike_current_price}' WHERE url = '{i}'"
@@ -558,11 +557,17 @@ async def update_nike(aiohttp, asyncio, BeautifulSoup, random, branddb, cursor, 
                                     insert_query = f"UPDATE shoes SET current_price=\
 '{nike_current_price}' WHERE url = '{i}'"
                                 await cursor.execute(insert_query)
+                                await branddb.commit()
                                 # print("CHECK: 3")
 
                                 # await channel.send(f"current {nike_current_price} old {price_q}")
                                 good_to_go = await channel.send(f"{i} UPDATED")
                                 await good_to_go.delete(delay=10)
+                                with open("checked_list.txt", "a", encoding="utf-8") as c_l:
+                                    print("CHECKED LIST SHOULD BE OPEN")
+                                    print(f"{i} should be added to checked list")
+                                    c_l.write(f"{i}\n")
+                                await asyncio.sleep(random.uniform(0.3, 1.6))
                                 break
                             else:
                                 print(f"CHECK: {response.status}")
@@ -572,9 +577,10 @@ async def update_nike(aiohttp, asyncio, BeautifulSoup, random, branddb, cursor, 
                                 else:
                                     print(
                                         "CHECK: damn, might wanna refresh the \
-proxies")
+proxies or the site is empty")
+                                    await channel.send(f"{i} did not work, site might be empty")
                                     await asyncio.sleep(random.uniform(0.8, 6.3))
-
+                                    break
                 except ValueError:
                     print("beep price failed")
                     pass

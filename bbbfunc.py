@@ -80,6 +80,10 @@ async def new_site_user(aiomysql, bot, message, member, channel):
                         author_email = split_mess[1]
                         print(f"PASS: {author_email}")
                         must_end = (".com", ".org", ".edu", ".co")
+                        cant_be = ("admin", "eddiebueno")
+                        if author_nick.lower() in cant_be:
+                            await channel.send("Try again")
+                            return
                         if any(message.content.endswith(must_end) for end in must_end):
                             if "@" not in author_email or not author_email.endswith(must_end) or len(author_nick) < 3 or len(split_mess) != 2:
                                 await channel.send("Invalid.\n\
@@ -126,6 +130,14 @@ async def new_site_user(aiomysql, bot, message, member, channel):
                             new_site_user = f"INSERT INTO users (name, email, password, discord_user_id) VALUES \
                                 ('{author_nick}','{author_email}','{hashed_password}', '{member.id}')"
                             await site_users_cursor.execute(new_site_user)
+                            await site_users.commit()
+                            get_new_user_id = f"SELECT user_id FROM users WHERE name = '{author_nick}'"
+                            await site_users_cursor.execute(get_new_user_id)
+                            new_users_id = await site_users_cursor.fetchone()
+                            new_users_id = new_users_id[0]
+                            new_users_profile = f"INSERT INTO profile (user_id, name, email) VALUES\
+                                ('{new_users_id}', '{author_nick}','{author_email}')"
+                            await site_users_cursor.execute(new_users_profile)
                             await site_users.commit()
                             await response.delete()
                             await channel.send(
@@ -776,13 +788,14 @@ async def search_shoes(discord, aiohttp, random, GIPHY_TOKEN, lowermsg, cursor, 
                             color=discord.Color.blue())
                         for result in all_found[:20]:
                             name = result[1]
-                            style_code = result[2]
-                            color = result[3]
-                            og_price = result[4]
-                            cur_price = result[5]
-                            url = result[6]
+                            nick_name = result[2]
+                            style_code = result[3]
+                            color = result[4]
+                            og_price = result[5]
+                            cur_price = result[6]
+                            url = result[7]
                             embed.add_field(
-                                name=name, value=f'Style Code: {style_code}\nColor: \
+                                name=name, value=f'Nickname: {nick_name}\nStyle Code: {style_code}\nColor: \
 {color}\nOld Price:{og_price}\nCurrent Price: {cur_price}\nURL: <{url}>', inline=False)
                         send_embed = await channel.send(embed=embed)
                         await send_embed.delete(delay=600)
@@ -798,7 +811,7 @@ async def search_shoes(discord, aiohttp, random, GIPHY_TOKEN, lowermsg, cursor, 
                                 send_bad = await channel.send(gif)
                             await send_bad.delete(delay=10)
                             await channel.send(f"Page {page} of search results. \
-                                               Be more specific for refined results.")
+Be more specific for refined results.")
                 else:
                     await channel.send("No results found.")
     except asyncio.CancelledError:
@@ -1152,22 +1165,37 @@ async def get_em(aiohttp, BeautifulSoup, bot, channel, add_shoe_channel, url):
 
     '''
     try:
-        while True:
-            shoe_channel = bot.get_channel(add_shoe_channel)
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as resp:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'html.parser')
-                    links = []
-                    for link in soup.find_all('a'):
-                        href = link.get('href')
-                        if href and href.startswith('http') and ".com/t/" in href:
-                            links.append(href)
-                            site_send = await shoe_channel.send(href)
-                            await site_send.delete(delay=7)
-                            await asyncio.sleep(2)
-                    await channel.send(f"{url} Done")
-            await asyncio.sleep(1)
+        shoe_channel = bot.get_channel(add_shoe_channel)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                html = await resp.text()
+                soup = BeautifulSoup(html, 'html.parser')
+                links = []
+                image_links = []
+                for link in soup.find_all('a'):
+                    href = link.get('href')
+                    if href and href.startswith('http') and ".com/t/" in href:
+                        links.append(href)
+                    if href.startswith('https://static') and href.endswith(('.png', '.jpg', '.jpeg', '.gif')):
+                        image_links.append(href)
+                        print(f"HERE: {image_links}")
+                good_dict = {}
+                good_d_list = []
+                for d_link in links:
+                    if d_link not in good_dict:
+                        good_dict[d_link] = True
+                        good_d_list.append(d_link)
+                for good in good_d_list:
+                    with open("bulk_add_list.txt", "r", encoding="utf-8") as bulk_r:
+                        added_list = bulk_r.read().split("\n")
+                        if good not in added_list:
+                            site_send = await shoe_channel.send(good)
+                            await site_send.delete(delay=5)
+                            await asyncio.sleep(1)
+                            with open("bulk_add_list.txt", "a", encoding="utf-8") as bulk_w:
+                                bulk_w.write(f"{good}\n")
+                await channel.send(f"{url} Done")
+        await asyncio.sleep(1)
         if asyncio.current_task().cancelled():
             return
     except asyncio.CancelledError:

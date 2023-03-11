@@ -30,6 +30,7 @@ import datetime
 from datetime import timezone
 # import json
 import asyncio
+import psutil
 import nest_asyncio
 import aiohttp
 import aiofiles
@@ -86,6 +87,9 @@ ip_token = os.getenv("IP_INFO_TOKEN")
 home_channel = int(os.getenv("HOME"))
 add_shoe_channel = int(os.getenv("ADD_SHOE"))
 
+process = psutil.Process()
+print(f"1   Memory used by script: {process.memory_info().rss / 1024 / 1024:.2f} MB")
+
 
 # headers
 with open("user_agents.txt", "r") as ua:
@@ -106,6 +110,7 @@ current_new_proxies = new_proxies.find(
     "textarea", {"class": "form-control"}).get_text()
 
 modified_file_time = os.path.getmtime("valid_proxies.txt")
+modified_check_time = os.path.getmtime("checked_list.txt")
 now_time = time.time()
 
 startup_proxies(requests, time, random, now_time,
@@ -135,7 +140,8 @@ You can ask me questions about stuff and things
     but you must have punctuation! ( . ? !)
     ''')
 
-    await send_mess.delete(delay=10)
+    await send_mess.delete(delay=5)
+    print(f"ON READY   Memory used by script: {process.memory_info().rss / 1024 / 1024:.2f} MB")
 
 
 @bot.event
@@ -166,6 +172,7 @@ async def on_member_join(member):
     channel = discord.utils.get(bot.guilds[0].channels, name="home")
     response = f"Welcome Welcome Welcome, {member.name}."
     await channel.send(response)
+    print(f"MEMBER JOIN   Memory used by script: {process.memory_info().rss / 1024 / 1024:.2f} MB")
 
 
 @bot.event
@@ -184,6 +191,8 @@ async def on_raw_reaction_add(payload):
     None.
 
     '''
+    print(
+        f"RAW REACT START   Memory used by script: {process.memory_info().rss / 1024 / 1024:.2f} MB")
 
     print("RAW: EMO: 1")
     message_id = payload.message_id
@@ -322,17 +331,19 @@ async def on_raw_reaction_add(payload):
 
                 print("RAW : ")
                 if click_emoji == discord.PartialEmoji(name='📥'):
-                    with open("scoop_list.txt", "r", encoding="utf-8") as s_l:
-                        for url in s_l:
-                            task_get_em = asyncio.create_task(
-                                get_em(
-                                    aiohttp, BeautifulSoup, bot, channel, add_shoe_channel, url), name="task_get_em")
+                    with open("scoop_list.txt", "r") as s_l:
+                        scoop_list = s_l.read().split('\n')
+                        print(scoop_list)
+                        for url in scoop_list:
+                            print(url)
+
                             task_query = f"INSERT INTO tasks_ran (task_name, discord_user_id) \
                                 VALUES ('task_get_em','{member.id}')"
+
                             await cursor.execute(task_query)
                             await branddb.commit()
-
-                            await task_get_em
+                            await get_em(
+                                aiohttp, BeautifulSoup, bot, channel, add_shoe_channel, url)
                             await asyncio.sleep(1)
 
                 print("RAW EMO: 13")
@@ -425,7 +436,8 @@ async def on_raw_reaction_add(payload):
 
     Want in?  Type Create Account below and answer the prompts!
                                        ''')
-
+                print(
+                    f"ON RAW REACT END   Memory used by script: {process.memory_info().rss / 1024 / 1024:.2f} MB")
                 # if click_emoji == discord.PartialEmoji(name="❌"):
                 #     with open("scoop_list.txt", "r", encoding="utf-8") as s_l:
                 #         for url in s_l:
@@ -483,7 +495,8 @@ async def on_message(message):
     None.
 
     '''
-
+    print(
+        f"ON MESSAGE START   Memory used by script: {process.memory_info().rss / 1024 / 1024:.2f} MB")
     # get channel info of guild
     await beep_channels(discord, aiomysql, message)
 
@@ -545,17 +558,42 @@ async def on_message(message):
                                         html = await resp.text()
                                         soup = BeautifulSoup(html, 'html.parser')
                                         links = []
+                                        image_links = []
                                         for link in soup.find_all('a'):
                                             href = link.get('href')
                                             if href and href.startswith(
                                                     'http') and ".com/t/" in href:
                                                 links.append(href)
+                                            if href.endswith(('.png', '.jpg', '.jpeg', '.gif')):
+                                                image_links.append(href)
+                                                print(image_links)
                                                 await shoe_channel.send(href)
                                                 await asyncio.sleep(1)
                                         await channel.send("Done")
 
                         all_nike = "update nike"
                         if lowermsg == all_nike:
+
+                            all_nike_urls = "SELECT url FROM shoes"
+                            await cursor.execute(all_nike_urls)
+                            nike_fetch = await cursor.fetchall()
+                            all_nike_links_list = await tup_to_list(nike_fetch)
+                            nike_urls = []
+                            with open("checked_list.txt", "r", encoding="utf-8") as check_em:
+                                last_checked = check_em.read().split("\n")
+                                for url in all_nike_links_list:
+                                    if "www.nike.com" in url and url not in last_checked:
+                                        nike_urls.append(url)
+                            print(nike_urls)
+                            if now_time - modified_check_time > 3600:
+                                with open("checked_list.txt", "w", encoding="utf-8"):
+                                    pass
+                            await update_nike(
+                                aiohttp, asyncio, BeautifulSoup, random, branddb, cursor, channel, nike_urls)
+
+                        now_nike = "update nike now"
+                        if lowermsg == now_nike:
+
                             all_nike_urls = "SELECT url FROM shoes"
                             await cursor.execute(all_nike_urls)
                             nike_fetch = await cursor.fetchall()
@@ -564,7 +602,7 @@ async def on_message(message):
                             for url in all_nike_links_list:
                                 if "www.nike.com" in url:
                                     nike_urls.append(url)
-                            print(nike_urls)
+                            # print(nike_urls)
                             await update_nike(
                                 aiohttp, asyncio, BeautifulSoup, random, branddb, cursor, channel, nike_urls)
 
@@ -779,7 +817,7 @@ async def on_message(message):
                     print("ADDSHOE: shoe1")
                     a_s_good = ("http", "www", "https", "got")
                     print("ADDSHOE: 2")
-                    if not any(message.content.startswith(good) for good in a_s_good):
+                    if not any(message.content.lower().startswith(good) for good in a_s_good):
                         await message.delete()
                     else:
                         # adding shoes to db
@@ -788,6 +826,8 @@ async def on_message(message):
                                        cursor,
                                        branddb,
                                        br_table_array)
+                print(
+                    f"ON MESSAGE END   Memory used by script: {process.memory_info().rss / 1024 / 1024:.2f} MB")
 
 
 @bot.event
@@ -804,6 +844,8 @@ async def on_raw_thread_delete(payload):
     None.
 
     '''
+    print(
+        f"ON RAW THREAD DELETE START   Memory used by script: {process.memory_info().rss / 1024 / 1024:.2f} MB")
     channel_id = payload.thread.id
     print(f"THRDEL: {channel_id} deleted")
     date_time = datetime.datetime.now(timezone.utc)
@@ -833,6 +875,8 @@ async def on_raw_thread_delete(payload):
                 print(f"THRDEL: {arch_channel}")
                 await beep_chan_cursor.execute(arch_channel)
                 await beep_chan.commit()
+    print(
+        f"ON RAW THREAD DELETE END   Memory used by script: {process.memory_info().rss / 1024 / 1024:.2f} MB")
 
 
 bot.run(TOKEN)
