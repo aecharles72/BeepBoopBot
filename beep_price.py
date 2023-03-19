@@ -567,7 +567,7 @@ async def update_nike(aiohttp, asyncio, BeautifulSoup, random, branddb, cursor, 
                                     print("CHECKED LIST SHOULD BE OPEN")
                                     print(f"{i} should be added to checked list")
                                     c_l.write(f"{i}\n")
-                                await asyncio.sleep(random.uniform(0.3, 1.6))
+                                await asyncio.sleep(random.uniform(0.7, 6.9))
                                 break
                             else:
                                 print(f"CHECK: {response.status}")
@@ -579,7 +579,7 @@ async def update_nike(aiohttp, asyncio, BeautifulSoup, random, branddb, cursor, 
                                         "CHECK: damn, might wanna refresh the \
 proxies or the site is empty")
                                     await channel.send(f"{i} did not work, site might be empty")
-                                    await asyncio.sleep(random.uniform(0.8, 6.3))
+                                    await asyncio.sleep(random.uniform(1.1, 2.3))
                                     break
                 except ValueError:
                     print("beep price failed")

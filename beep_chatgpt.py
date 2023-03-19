@@ -77,12 +77,12 @@ async def handle_message(aiomysql, openai, message, channel):
                     print("CHAT added new user")
                 else:
                     print("CHAT: known user")
-                if punct_message is True:
+                if punct_message is True and "Beepmake" not in message.content:
                     print(f"CHAT: User:{message.content}")
                     response = openai.Completion.create(
                         engine="text-davinci-003",
                         prompt=message.content,
-                        max_tokens=100,
+                        max_tokens=256,
                         n=1,
                         top_p=1,
                         stop=None,
@@ -103,4 +103,26 @@ async def handle_message(aiomysql, openai, message, channel):
                     await cursor.execute(
                         insert_interaction_query, (
                             discord_user_id, message.content, generated_text, channel.id, channel))
+                    await conn.commit()
+                if message.content.startswith("Beepmake"):
+                    to_make = message.content[8:]
+                    print(f"CHAT: {to_make}")
+                    response = openai.Image.create(
+                        prompt=to_make,
+                        n=1,
+                        size="1024x1024"
+                    )
+                    image_url = response['data'][0]['url']
+                    print(f"CHAT: Beep:{image_url}")
+                    print(f"CHAT: {message.channel}")
+                    print(f"CHAT: {message.channel.id}")
+                    print(f"CHAT: {message.author.id}")
+                    print(f"CHAT: {message.author}")
+                    await channel.send(image_url)
+                    # await channel.send("gr^^^")
+                    insert_interaction_query = "INSERT INTO interactions (discord_user_id, \
+                        context, bot_response, thread_id, thread_name) VALUES (%s, %s, %s, %s, %s)"
+                    await cursor.execute(
+                        insert_interaction_query, (
+                            discord_user_id, message.content, image_url, channel.id, channel))
                     await conn.commit()

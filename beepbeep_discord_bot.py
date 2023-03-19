@@ -495,6 +495,7 @@ async def on_message(message):
     None.
 
     '''
+
     print(
         f"ON MESSAGE START   Memory used by script: {process.memory_info().rss / 1024 / 1024:.2f} MB")
     # get channel info of guild
@@ -519,6 +520,38 @@ async def on_message(message):
                 where_msg = message.channel.id
                 member = message.author
                 print(member.roles)
+
+                # grab images for db items
+                for embed in message.embeds:
+                    if embed.type == 'link':
+                        try:
+                            link = message.content.split()[0]
+                            print(f" EMBED IS: {embed}")
+                            # print(embed.title)
+                            # print(embed.description)
+                            # # print(embed.fields[0].name)
+                            # # print(embed.fields[0].value)
+                            # print(embed.footer.text)
+                            # print(embed.image)
+                            # print(embed.image.url)
+                            # print(embed.thumbnail)
+                            print(f"EMBED IMG: {embed.thumbnail.url}")
+                            print(f"EMBED MSG CNT: {link}")
+                            # image_url = embed.image.url
+                            if embed.thumbnail.url:
+                                add_it = f"UPDATE shoes SET image_url = '{embed.thumbnail.url}' WHERE url = '{link}'"
+                                await cursor.execute(add_it)
+                                await branddb.commit()
+                                with open("img_checked.txt", "a", encoding="utf-8") as c_l:
+                                    print("IMG CHECKED SHOULD BE OPEN")
+                                    print(f"{link} should be added to checked list")
+                                    c_l.write(f"{link}\n")
+                        except:
+                            print(f"IMG ERROR HERE  {link}  IMG ERROR HERE")
+                            await channel.send(f"{link} did not work, site might be empty")
+                            break
+                    else:
+                        await channel.send(f"{link} did not work, site might be empty")
 
                 for role in member.roles:
                     if "Admin" in role.name:
@@ -582,10 +615,10 @@ async def on_message(message):
                             with open("checked_list.txt", "r", encoding="utf-8") as check_em:
                                 last_checked = check_em.read().split("\n")
                                 for url in all_nike_links_list:
-                                    if "www.nike.com" in url and url not in last_checked:
+                                    if "www.nike" in url and url not in last_checked:
                                         nike_urls.append(url)
                             print(nike_urls)
-                            if now_time - modified_check_time > 3600:
+                            if now_time - modified_check_time > 460:
                                 with open("checked_list.txt", "w", encoding="utf-8"):
                                     pass
                             await update_nike(
@@ -605,6 +638,22 @@ async def on_message(message):
                             # print(nike_urls)
                             await update_nike(
                                 aiohttp, asyncio, BeautifulSoup, random, branddb, cursor, channel, nike_urls)
+
+                        img_time = "update thumbs"
+                        if lowermsg == img_time:
+                            all_nike_urls = "SELECT url FROM shoes"
+                            await cursor.execute(all_nike_urls)
+                            nike_fetch = await cursor.fetchall()
+                            all_nike_links_list = await tup_to_list(nike_fetch)
+                            nike_urls = []
+                            with open("img_checked.txt", "r", encoding="utf-8") as check_em:
+                                last_checked = check_em.read().split("\n")
+                                for url in all_nike_links_list:
+                                    if "www.nike" in url and url not in last_checked:
+                                        nike_urls.append(url)
+                            for get in nike_urls:
+                                await channel.send(get)
+                                await asyncio.sleep(10)
 
                 # only messages sent in home
                 if where_msg == home_channel:
