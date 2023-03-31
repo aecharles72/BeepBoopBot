@@ -1,8 +1,9 @@
 # BeepBoopBot
-Practice Project
+Pythong, MySQL, Discord API, GIPHY API, TENOR API, OPENAI API Practice Project
 
     This is a fun project, creating a discord bot that catalogs product links and checks them for
-new information on command.  Also integrated some simple ChatGPT functionality into the bot for fun.
+new information on command.  Also integrated some simple ChatGPT functionality into the bot for 
+kicks initially.
     Using MAMP I created a few MySQL databases to handle the information the bot receives and to
 catalog the links and their information.  You can add a new site into a particular url format
 category, then add links of products from that url to be cataloged.  Using multiple commands you
@@ -53,7 +54,7 @@ Python dotenv
 ----
 For security
 
-    There are a few dependencies that need to be setup, for instance creating the empty text
+    There are a few dependencies that need to be setup, for instance creating a few labeled empty text
     files and loading the appropriate environment variables.
 
 
