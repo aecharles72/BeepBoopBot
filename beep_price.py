@@ -579,6 +579,8 @@ async def update_nike(aiohttp, asyncio, BeautifulSoup, random, branddb, cursor, 
                                         "CHECK: damn, might wanna refresh the \
 proxies or the site is empty")
                                     await channel.send(f"{i} did not work, site might be empty")
+                                    with open("dead_list.txt", "a", encoding="utf-8") as dead:
+                                        dead.write(f"{i}\n")
                                     await asyncio.sleep(random.uniform(1.1, 2.3))
                                     break
                 except ValueError:

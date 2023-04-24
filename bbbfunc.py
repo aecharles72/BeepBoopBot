@@ -1049,11 +1049,11 @@ async def beep_channels(discord, aiomysql, message):
             async with beep_ch.acquire() as beep_chan:
                 async with beep_chan.cursor() as beep_chan_cursor:
                     channel_id = message.channel.id
-                    print(f"BEEPCH: {channel_id}")
+                    # print(f"BEEPCH: {channel_id}")
                     channel_name = message.channel
                     print(f"BEEPCH: {channel_name}")
                     discord_user_id = message.author.id
-                    print(f"BEEPCH: {discord_user_id}")
+                    # print(f"BEEPCH: {discord_user_id}")
                     check_channels = f"SELECT thread_id FROM beep_channels WHERE thread_id = \
                         '{channel_id}'"
                     await beep_chan_cursor.execute(check_channels)

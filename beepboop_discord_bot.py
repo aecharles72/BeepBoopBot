@@ -31,6 +31,7 @@ from datetime import timezone
 # import json
 import asyncio
 import psutil
+import more_itertools
 import nest_asyncio
 import aiohttp
 import aiofiles
@@ -85,6 +86,7 @@ TENOR_TOKEN = os.getenv("TENOR_TOKEN")
 openai.api_key = os.getenv("OPEN_AI_TOKEN")
 ip_token = os.getenv("IP_INFO_TOKEN")
 home_channel = int(os.getenv("HOME"))
+thumbs_channel = int(os.getenv("THUMBS"))
 add_shoe_channel = int(os.getenv("ADD_SHOE"))
 
 process = psutil.Process()
@@ -519,44 +521,44 @@ async def on_message(message):
                 lowermsg = message.content.lower()
                 where_msg = message.channel.id
                 member = message.author
-                print(member.roles)
+                # print(member.roles)
 
-                # grab images for db items
+                # grab thumb from embed
                 for embed in message.embeds:
                     if embed.type == 'link':
+                        link = message.content.split()[0]
                         try:
-                            link = message.content.split()[0]
-                            print(f" EMBED IS: {embed}")
-                            # print(embed.title)
-                            # print(embed.description)
-                            # # print(embed.fields[0].name)
-                            # # print(embed.fields[0].value)
-                            # print(embed.footer.text)
-                            # print(embed.image)
-                            # print(embed.image.url)
-                            # print(embed.thumbnail)
-                            print(f"EMBED IMG: {embed.thumbnail.url}")
                             print(f"EMBED MSG CNT: {link}")
-                            # image_url = embed.image.url
                             if embed.thumbnail.url:
-                                add_it = f"UPDATE shoes SET image_url = '{embed.thumbnail.url}' WHERE url = '{link}'"
-                                await cursor.execute(add_it)
-                                await branddb.commit()
-                                with open("img_checked.txt", "a", encoding="utf-8") as c_l:
-                                    print("IMG CHECKED SHOULD BE OPEN")
-                                    print(f"{link} should be added to checked list")
-                                    c_l.write(f"{link}\n")
+                                with open("img_checked.txt", "r", encoding="utf-8") as o_l:
+                                    already = o_l.read().split("/n")
+                                    print("IMG CHECKING")
+                                    if link in already:
+                                        await channel.send(f"{link} ALREADY")
+                                        return
+                                    else:
+                                        print("CHECKED OUT")
+                                        add_it = f"UPDATE shoes SET image_url = '{embed.thumbnail.url}' WHERE url = '{link}'"
+                                        await cursor.execute(add_it)
+                                        await branddb.commit()
+                                        with open("img_checked.txt", "a", encoding="utf-8") as c_l:
+                                            print("added to checked list")
+                                            c_l.write(f"{link}\n")
                         except:
-                            print(f"IMG ERROR HERE  {link}  IMG ERROR HERE")
-                            await channel.send(f"{link} did not work, site might be empty")
-                            break
-                    else:
-                        await channel.send(f"{link} did not work, site might be empty")
+                            print("NOT LINK EMBED")
 
+                if where_msg == thumbs_channel:
+                    print("THUMB")
+                    if message.content not in message.embeds:
+                        print("NOT EMBED")
+                        with open("dead_list.txt", "a", encoding="utf-8") as dead:
+                            dead.write(f"{message.content}\n")
+
+                # Admin commands
                 for role in member.roles:
                     if "Admin" in role.name:
-                        print(role.name)
-                        print(role)
+                        # print(role.name)
+                        # print(role)
                         clear = "beep clean"
                         if lowermsg == clear:
                             async for message in channel.history():
@@ -570,6 +572,7 @@ async def on_message(message):
                             await asyncio.sleep(3)
                             await message.channel.purge()
 
+                        # depr
                         # if "beep look" == lowermsg:
                         #     await update_url_imgs(aiohttp,
                         #                           BeautifulSoup,
@@ -618,7 +621,7 @@ async def on_message(message):
                                     if "www.nike" in url and url not in last_checked:
                                         nike_urls.append(url)
                             print(nike_urls)
-                            if now_time - modified_check_time > 460:
+                            if now_time - modified_check_time > 1800:
                                 with open("checked_list.txt", "w", encoding="utf-8"):
                                     pass
                             await update_nike(
@@ -639,21 +642,117 @@ async def on_message(message):
                             await update_nike(
                                 aiohttp, asyncio, BeautifulSoup, random, branddb, cursor, channel, nike_urls)
 
+                        # long grab from thumbs
+                        if lowermsg == "thumby":
+                            channel = bot.get_channel(thumbs_channel)
+                            async for message in channel.history(limit=None):
+                                for embed in message.embeds:
+                                    if embed.type == 'link':
+                                        link = message.content.split()[0]
+                                        try:
+                                            print(f" EMBED IS: {embed}")
+                                            # print(embed.title)
+                                            # print(embed.description)
+                                            # print(embed.fields[0].name)
+                                            # print(embed.fields[0].value)
+                                            # print(embed.footer.text)
+                                            # print(embed.image)
+                                            # print(embed.image.url)
+                                            # print(embed.thumbnail)
+                                            print(f"EMBED IMG: {embed.thumbnail.url}")
+                                            print(f"EMBED MSG CNT: {link}")
+                                            # image_url = embed.image.url
+                                            if embed.thumbnail.url:
+                                                with open("img_checked.txt", "r", encoding="utf-8") as o_l:
+                                                    already = o_l.read().split("/n")
+                                                    print("IMG CHECKING")
+                                                    if link in already:
+                                                        await channel.send(f"{link} ALREADY")
+                                                        return
+                                                    else:
+                                                        print("CHECKED OUT")
+                                                        add_it = f"UPDATE shoes SET image_url = '{embed.thumbnail.url}' WHERE url = '{link}'"
+                                                        await cursor.execute(add_it)
+                                                        await branddb.commit()
+                                                        with open("img_checked.txt", "a", encoding="utf-8") as c_l:
+                                                            print("added to checked list")
+                                                            c_l.write(f"{link}\n")
+                                                            await asyncio.sleep(random.uniform(1, 3))
+                                            else:
+                                                print(f"{link}/NOTHUMB")
+                                                await channel.send(f"{link}/NOTHUMB")
+                                                break
+                                        except:
+                                            print(f"IMG ERROR HERE  {link}  IMG ERROR HERE")
+                                            await channel.send(f"{link}/FAILEXCEPT LINK ERROR OR DUPE")
+                                            break
+                                    else:
+                                        await channel.send("NOT A LINK EMBED")
+
                         img_time = "update thumbs"
                         if lowermsg == img_time:
+                            print("1")
                             all_nike_urls = "SELECT url FROM shoes"
                             await cursor.execute(all_nike_urls)
                             nike_fetch = await cursor.fetchall()
                             all_nike_links_list = await tup_to_list(nike_fetch)
                             nike_urls = []
-                            with open("img_checked.txt", "r", encoding="utf-8") as check_em:
-                                last_checked = check_em.read().split("\n")
-                                for url in all_nike_links_list:
-                                    if "www.nike" in url and url not in last_checked:
-                                        nike_urls.append(url)
-                            for get in nike_urls:
-                                await channel.send(get)
-                                await asyncio.sleep(10)
+
+                            with open("dead_list.txt", "r", encoding="utf-8") as check_dead:
+                                dead_checked = check_dead.read().split("\n")
+                                with open("img_checked.txt", "r", encoding="utf-8") as check_em:
+                                    last_checked = check_em.read().split("\n")
+                                    for url in all_nike_links_list:
+                                        if "www.nike" in url and url not in last_checked and dead_checked:
+                                            nike_urls.append(url)
+                            print("2")
+                            for chunk in more_itertools.chunked(nike_urls, 15):
+                                for get in chunk:
+                                    await channel.send(get)
+                                    await asyncio.sleep(random.uniform(1, 2.5))
+
+                        # img_time = "update thumbs"
+                        # if lowermsg == img_time:
+                        #     all_nike_urls = "SELECT url FROM shoes"
+                        #     await cursor.execute(all_nike_urls)
+                        #     nike_fetch = await cursor.fetchall()
+                        #     all_nike_links_list = await tup_to_list(nike_fetch)
+                        #     nike_urls = []
+                        #     with open("img_checked.txt", "r", encoding="utf-8") as check_em:
+                        #         last_checked = check_em.read().split("\n")
+                        #         for url in all_nike_links_list:
+                        #             if "www.nike" in url and url not in last_checked:
+                        #                 nike_urls.append(url)
+                        #     for get in nike_urls:
+                        #         await channel.send(get)
+                        #         await asyncio.sleep(10)
+                        #     # grab images for db items
+                        #     for embed in message.embeds:
+                        #         if embed.type == 'link':
+                        #             try:
+                        #                 link = message.content.split()[0]
+                        #                 print(f" EMBED IS: {embed}")
+                        #                 print(f"EMBED IMG: {embed.thumbnail.url}")
+                        #                 print(f"EMBED MSG CNT: {link}")
+                        #                 # image_url = embed.image.url
+                        #                 if embed.thumbnail.url:
+                        #                     add_it = f"UPDATE shoes SET image_url = '{embed.thumbnail.url}' WHERE url = '{link}'"
+                        #                     await cursor.execute(add_it)
+                        #                     await branddb.commit()
+                        #                     with open("img_checked.txt", "a", encoding="utf-8") as c_l:
+                        #                         print("IMG CHECKED SHOULD BE OPEN")
+                        #                         print(f"{link} should be added to checked list")
+                        #                         c_l.write(f"{link}\n")
+                        #                 else:
+                        #                     print(f"IMG ERROR HERE  {link}  IMG ERROR HERE")
+                        #                     await channel.send(f"{link} did not work, site might be empty")
+                        #                     break
+                        #             except:
+                        #                 print(f"IMG ERROR HERE  {link}  IMG ERROR HERE")
+                        #                 await channel.send(f"{link} did not work, site might be empty")
+                        #                 break
+                        #         else:
+                        #             await channel.send(f"{link} did not work, site might be empty")
 
                 # only messages sent in home
                 if where_msg == home_channel:
